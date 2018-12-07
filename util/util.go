@@ -66,14 +66,14 @@ func ReadIntsFromFile(name string) ([]int, error) {
 }
 
 type Timer struct {
-	Name string
-	StartedAt time.Time
+	Name           string
+	StartedAt      time.Time
 	LastCheckpoint time.Time
 }
 
 func NewTimer(name string) Timer {
 	now := time.Now()
-	return Timer{ name, now, now}
+	return Timer{name, now, now}
 }
 
 func (t *Timer) Checkpoint() (sinceStart time.Duration, sinceLast time.Duration) {
@@ -108,4 +108,12 @@ func MaxInt(first int, rest ...int) int {
 		}
 	}
 	return result
+}
+
+func AbsInt(i int) int {
+	if i < 0 {
+		return -i
+	} else {
+		return i
+	}
 }

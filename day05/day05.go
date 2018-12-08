@@ -1,12 +1,13 @@
 /*
 Looks like accumulating characters as a stack, and checking if the top two can annihilate
  */
-package main
+package day05
 
 import (
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io/ioutil"
+	"log"
 	"unicode"
 )
 
@@ -22,7 +23,7 @@ func CanReact(a, b rune) bool {
 }
 
 func React(bytes []byte) []byte {
-	stack := util.NewStack(len(bytes))
+	stack := util.NewGenericStack(len(bytes))
 	for _, b := range bytes {
 		top, ok := stack.Peek()
 		if ok && CanReact(rune(top.(byte)), rune(b)) {
@@ -57,24 +58,24 @@ func ReadInput(name string) []byte {
 	return bytes
 }
 
-func part1() {
-	t := util.NewTimer("day05part1")
-	defer t.PrintCheckpoint("end")
+func part1(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	bytes := ReadInput("input1.txt")
-	t.PrintCheckpoint(fmt.Sprint("read ", len(bytes), " bytes"))
+	bytes := ReadInput("day05/input1.txt")
+	t.LogCheckpoint(fmt.Sprint("read ", len(bytes), " bytes"))
 
 	polymer := React(bytes)
-	fmt.Printf("polymer is %v units long\n", len(polymer))
-	t.PrintCheckpoint("reacted polymer")
+	logger.Printf("polymer is %v units long\n", len(polymer))
+	t.LogCheckpoint("reacted polymer")
 }
 
-func part2() {
-	t := util.NewTimer("day05part2")
-	defer t.PrintCheckpoint("end")
+func part2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	bytes := ReadInput("input1.txt")
-	t.PrintCheckpoint(fmt.Sprint("read ", len(bytes), " bytes"))
+	bytes := ReadInput("day05/input1.txt")
+	t.LogCheckpoint(fmt.Sprint("read ", len(bytes), " bytes"))
 
 	shortest := len(bytes)
 	best := byte(' ')
@@ -85,11 +86,11 @@ func part2() {
 			best = b
 		}
 	}
-	fmt.Printf("shortest polymer is %v units long (after removing %v)\n", shortest, best)
-	t.PrintCheckpoint("found shortest possible polymer")
+	logger.Printf("shortest polymer is %v units long (after removing %v)\n", shortest, best)
+	t.LogCheckpoint("found shortest possible polymer")
 }
 
-func main() {
-	part1()
-	part2()
+func init() {
+	util.RegisterSolution("day05part1", part1)
+	util.RegisterSolution("day05part2", part2)
 }

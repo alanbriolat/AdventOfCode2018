@@ -1,9 +1,10 @@
-package main
+package day07
 
 import (
 	"bufio"
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
+	"log"
 	"os"
 	"sort"
 )
@@ -92,7 +93,7 @@ func (t *DependencyTree) ResolveAll() []byte {
 		})
 		// Resolve the step, find more steps that can be resolved
 		more := t.Resolve(next[0])
-		//fmt.Println("steps:", steps, "next:", next, "more:", more)
+		//logger.Println("steps:", steps, "next:", next, "more:", more)
 		// Drop the step we just resolved, include new ones
 		next = append(next[1:], more...)
 		// Make sure the step we just resolved is kept in steps
@@ -169,43 +170,43 @@ func ReadDependencies(filename string) []Dependency {
 	return result
 }
 
-func part1() {
-	t := util.NewTimer("day07part1")
-	defer t.PrintCheckpoint("end")
+func part1(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	dependencies := ReadDependencies("input.txt")
-	t.PrintCheckpoint(fmt.Sprintf("read %v dependencies", len(dependencies)))
+	dependencies := ReadDependencies("day07/input.txt")
+	t.LogCheckpoint(fmt.Sprintf("read %v dependencies", len(dependencies)))
 
 	depTree := NewDependencyTree()
 	for _, d := range dependencies {
 		depTree.AddDependency(d.Step, d.DependsOn)
 	}
-	t.PrintCheckpoint("build dependency tree")
+	t.LogCheckpoint("build dependency tree")
 
 	steps := depTree.ResolveAll()
-	fmt.Println("steps:", string(steps))
-	t.PrintCheckpoint("resolved dependency graph")
+	logger.Println("steps:", string(steps))
+	t.LogCheckpoint("resolved dependency graph")
 }
 
-func part2() {
-	t := util.NewTimer("day07part2")
-	defer t.PrintCheckpoint("end")
+func part2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	dependencies := ReadDependencies("input.txt")
-	t.PrintCheckpoint(fmt.Sprintf("read %v dependencies", len(dependencies)))
+	dependencies := ReadDependencies("day07/input.txt")
+	t.LogCheckpoint(fmt.Sprintf("read %v dependencies", len(dependencies)))
 
 	depTree := NewDependencyTree()
 	for _, d := range dependencies {
 		depTree.AddDependency(d.Step, d.DependsOn)
 	}
-	t.PrintCheckpoint("build dependency tree")
+	t.LogCheckpoint("build dependency tree")
 
 	duration := depTree.ResolveAllParallel(5)
-	fmt.Println("completed steps in", duration, "seconds")
-	t.PrintCheckpoint("resolved dependency graph")
+	logger.Println("completed steps in", duration, "seconds")
+	t.LogCheckpoint("resolved dependency graph")
 }
 
-func main() {
-	part1()
-	part2()
+func init() {
+	util.RegisterSolution("day07part1", part1)
+	util.RegisterSolution("day07part2", part2)
 }

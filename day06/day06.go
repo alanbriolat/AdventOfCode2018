@@ -29,12 +29,13 @@ However, with Manhattan distance, edges never converge. (As you get further
 from the boundary, the distance normal to the boundary overwhelms and reduces
 the influence of the distance parallel to the boundary.)
 */
-package main
+package day06
 
 import (
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io"
+	"log"
 	"math"
 	"os"
 )
@@ -185,47 +186,47 @@ func ReadPoints(name string) []Point {
 	return result
 }
 
-func part1() {
-	t := util.NewTimer("day06part1")
-	defer t.PrintCheckpoint("end")
+func part1(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	points := ReadPoints("input.txt")
-	t.PrintCheckpoint(fmt.Sprint("read ", len(points), " points"))
+	points := ReadPoints("day06/input.txt")
+	t.LogCheckpoint(fmt.Sprint("read ", len(points), " points"))
 
 	worldMap := NewMap()
 	for _, p := range points {
 		worldMap.CreateLocation(p)
 	}
-	t.PrintCheckpoint(fmt.Sprintf("populated map %v to %v", worldMap.Min, worldMap.Max))
+	t.LogCheckpoint(fmt.Sprintf("populated map %v to %v", worldMap.Min, worldMap.Max))
 
 	worldMap.MarkInfinite()
-	t.PrintCheckpoint(fmt.Sprintf("marked locations as infinite"))
+	t.LogCheckpoint(fmt.Sprintf("marked locations as infinite"))
 
 	worldMap.CalculateAreas()
-	t.PrintCheckpoint(fmt.Sprintf("calculated areas"))
+	t.LogCheckpoint(fmt.Sprintf("calculated areas"))
 
 	bestLocation := worldMap.FindMostRemoteLocation()
-	t.PrintCheckpoint(fmt.Sprintf("found destination: %+v", bestLocation))
+	t.LogCheckpoint(fmt.Sprintf("found destination: %+v", bestLocation))
 }
 
-func part2() {
-	t := util.NewTimer("day06part2")
-	defer t.PrintCheckpoint("end")
+func part2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	points := ReadPoints("input.txt")
-	t.PrintCheckpoint(fmt.Sprint("read ", len(points), " points"))
+	points := ReadPoints("day06/input.txt")
+	t.LogCheckpoint(fmt.Sprint("read ", len(points), " points"))
 
 	worldMap := NewMap()
 	for _, p := range points {
 		worldMap.CreateLocation(p)
 	}
-	t.PrintCheckpoint(fmt.Sprintf("populated map %v to %v", worldMap.Min, worldMap.Max))
+	t.LogCheckpoint(fmt.Sprintf("populated map %v to %v", worldMap.Min, worldMap.Max))
 
 	area := worldMap.CountPointsWithinRange(10000)
-	t.PrintCheckpoint(fmt.Sprintf("found %v points with distance sum < 10000", area))
+	t.LogCheckpoint(fmt.Sprintf("found %v points with distance sum < 10000", area))
 }
 
-func main() {
-	part1()
-	part2()
+func init() {
+	util.RegisterSolution("day06part1", part1)
+	util.RegisterSolution("day06part2", part2)
 }

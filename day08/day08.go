@@ -1,8 +1,9 @@
-package main
+package day08
 
 import (
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
+	"log"
 )
 
 type Node struct {
@@ -37,12 +38,12 @@ func readInput(filename string) Input {
 	return Input{result[:], result[:]}
 }
 
-func part1and2() {
-	t := util.NewTimer("day08part1and2")
-	defer t.PrintCheckpoint("end")
+func part1and2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	input := readInput("input.txt")
-	t.PrintCheckpoint(fmt.Sprintf("read %v numbers", len(input.Data)))
+	input := readInput("day08/input.txt")
+	t.LogCheckpoint(fmt.Sprintf("read %v numbers", len(input.Data)))
 
 
 	stack := util.NewGenericStack(0)
@@ -80,11 +81,11 @@ func part1and2() {
 			}
 		}
 	}
-	fmt.Println("sum of metadata entries:", sum)
-	fmt.Println("value of root node:", top.Value)
-	t.PrintCheckpoint(fmt.Sprintf("results"))
+	logger.Println("sum of metadata entries:", sum)
+	logger.Println("value of root node:", top.Value)
+	t.LogCheckpoint(fmt.Sprintf("results"))
 }
 
-func main() {
-	part1and2()
+func init() {
+	util.RegisterSolution("day08", part1and2)
 }

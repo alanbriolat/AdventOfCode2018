@@ -9,13 +9,14 @@ Part 1
 - Record the events as statistics for guards
 - Search the statistics for the most sleepy guard's most sleepy minute
  */
-package main
+package day04
 
 import (
 	"bufio"
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -162,42 +163,42 @@ func ReadEventsFromFile(name string) ([]Event, error) {
 	return result, nil
 }
 
-func part1and2() {
-	t := util.NewTimer("part1and2")
-	defer t.PrintCheckpoint("end")
+func part1and2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	events, err := ReadEventsFromFile("input1.txt")
+	events, err := ReadEventsFromFile("day04/input1.txt")
 	util.Check(err)
 	eventStream := EventStream(events)
-	t.PrintCheckpoint(fmt.Sprint("read ", len(events), " events"))
+	t.LogCheckpoint(fmt.Sprint("read ", len(events), " events"))
 
 	sort.Sort(eventStream)
-	t.PrintCheckpoint(fmt.Sprint("sorted events"))
+	t.LogCheckpoint(fmt.Sprint("sorted events"))
 
 	eventStream.Propagate()
-	t.PrintCheckpoint("propagated guard IDs")
+	t.LogCheckpoint("propagated guard IDs")
 
 	roster := Roster{}
 	for _, e := range eventStream {
 		roster.ApplyEvent(e)
 	}
-	t.PrintCheckpoint("applied events to roster")
+	t.LogCheckpoint("applied events to roster")
 
 	sleepyGuard := roster.FindSleepyGuard()
-	fmt.Printf("sleepiest guard: #%v, %v minutes\n", sleepyGuard.Id, sleepyGuard.TotalSleep)
+	logger.Printf("sleepiest guard: #%v, %v minutes\n", sleepyGuard.Id, sleepyGuard.TotalSleep)
 	sleepyMinute, sleepyMinuteTotal := sleepyGuard.FindSleepyMinute()
-	fmt.Printf("sleepiest minute: 00:%02d, %d times\n", sleepyMinute, sleepyMinuteTotal)
-	fmt.Println("part1 answer:", sleepyGuard.Id, "*", sleepyMinute, "=", sleepyGuard.Id * sleepyMinute)
-	t.PrintCheckpoint("found sleepiest")
+	logger.Printf("sleepiest minute: 00:%02d, %d times\n", sleepyMinute, sleepyMinuteTotal)
+	logger.Println("part1 answer:", sleepyGuard.Id, "*", sleepyMinute, "=", sleepyGuard.Id * sleepyMinute)
+	t.LogCheckpoint("found sleepiest")
 
 	consistentGuard, consistentMinute := roster.FindConsistentlySleepyGuard()
-	fmt.Printf("consistent guard: #%v, minute %02d, %v times\n",
+	logger.Printf("consistent guard: #%v, minute %02d, %v times\n",
 		consistentGuard.Id, consistentMinute, consistentGuard.SleepStats[consistentMinute])
-	fmt.Printf("part2 answer: %v * %v = %v\n",
+	logger.Printf("part2 answer: %v * %v = %v\n",
 		consistentGuard.Id, consistentMinute, consistentGuard.Id * consistentMinute)
-	t.PrintCheckpoint("found consistent")
+	t.LogCheckpoint("found consistent")
 }
 
-func main() {
-	part1and2()
+func init() {
+	util.RegisterSolution("day04", part1and2)
 }

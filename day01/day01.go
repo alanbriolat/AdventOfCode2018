@@ -1,8 +1,8 @@
-package main
+package day01
 
 import (
-	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
+	"log"
 )
 
 type state struct {
@@ -26,15 +26,15 @@ func (s *state) Update(change int) {
 }
 
 
-func part1and2() {
-	changes, err := util.ReadIntsFromFile("input1.txt")
+func part1and2(logger *log.Logger) {
+	changes, err := util.ReadIntsFromFile("day01/input1.txt")
 	util.Check(err)
 	state := State()
 
 	for _, x := range changes {
 		state.Update(x)
 	}
-	fmt.Println("Resulting Frequency:", state.Frequency)
+	logger.Println("Resulting Frequency:", state.Frequency)
 	for !state.FoundRepeat {
 		for _, x := range changes {
 			state.Update(x)
@@ -43,9 +43,9 @@ func part1and2() {
 			}
 		}
 	}
-	fmt.Println("First repeated Frequency:", state.Repeat)
+	logger.Println("First repeated Frequency:", state.Repeat)
 }
 
-func main() {
-	part1and2()
+func init() {
+	util.RegisterSolution("day01", part1and2)
 }

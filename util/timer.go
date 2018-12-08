@@ -1,19 +1,20 @@
 package util
 
 import (
-	"fmt"
+	"log"
 	"time"
 )
 
 type Timer struct {
-	Name           string
+	Log            *log.Logger
+	Prefix         string
 	StartedAt      time.Time
 	LastCheckpoint time.Time
 }
 
-func NewTimer(name string) Timer {
+func NewTimer(log *log.Logger, prefix string) Timer {
 	now := time.Now()
-	return Timer{name, now, now}
+	return Timer{log, prefix, now, now}
 }
 
 func (t *Timer) Checkpoint() (sinceStart time.Duration, sinceLast time.Duration) {
@@ -24,8 +25,8 @@ func (t *Timer) Checkpoint() (sinceStart time.Duration, sinceLast time.Duration)
 	return
 }
 
-func (t *Timer) PrintCheckpoint(checkpointName string) {
+func (t *Timer) LogCheckpoint(checkpointName string) {
 	sinceStart, sinceLast := t.Checkpoint()
-	fmt.Printf("%v - %v: elapsed %v, total %v\n",
-		t.Name, checkpointName, sinceLast, sinceStart)
+	t.Log.Printf("%v%v (elapsed %v, total %v)\n",
+		t.Prefix, checkpointName, sinceLast, sinceStart)
 }

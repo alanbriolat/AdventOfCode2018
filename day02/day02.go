@@ -1,8 +1,8 @@
-package main
+package day02
 
 import (
-	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
+	"log"
 	"strings"
 )
 
@@ -70,12 +70,12 @@ func SharedString(s1, s2 string) string {
 	return builder.String()
 }
 
-func main() {
-	t := util.NewTimer("day02p1")
-	defer t.PrintCheckpoint("end")
-	lines, err := util.ReadLinesFromFile("input1.txt")
+func part1and2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
+	lines, err := util.ReadLinesFromFile("day02/input1.txt")
 	util.Check(err)
-	t.PrintCheckpoint("readInput")
+	t.LogCheckpoint("readInput")
 
 	doubles, triples := 0, 0
 	for _, s := range lines {
@@ -87,10 +87,10 @@ func main() {
 		if counter.HasTriple {
 			triples++
 		}
-		//fmt.Println(s, "HasDouble?", counter.HasDouble, "HasTriple?", counter.HasTriple, counter.Counts)
+		//logger.Println(s, "HasDouble?", counter.HasDouble, "HasTriple?", counter.HasTriple, counter.Counts)
 	}
-	t.PrintCheckpoint("checksum")
-	fmt.Println("Checksum:", doubles * triples)
+	t.LogCheckpoint("checksum")
+	logger.Println("Checksum:", doubles * triples)
 
 
 	var closest *Comparison = nil
@@ -102,6 +102,10 @@ func main() {
 			}
 		}
 	}
-	t.PrintCheckpoint("closestComparison")
-	fmt.Println("Closest IDs:", closest, "shared string:", SharedString(closest.s1, closest.s2))
+	t.LogCheckpoint("closestComparison")
+	logger.Println("Closest IDs:", closest, "shared string:", SharedString(closest.s1, closest.s2))
+}
+
+func init() {
+	util.RegisterSolution("day02", part1and2)
 }

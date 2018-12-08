@@ -1,9 +1,10 @@
-package main
+package day03
 
 import (
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io"
+	"log"
 	"os"
 )
 
@@ -95,12 +96,13 @@ func ReadClaimsFromFile(name string) ([]Claim, error) {
 /*
 
  */
-func part1and2() {
-	t := util.NewTimer("part1and2")
-	defer t.PrintCheckpoint("end")
+func part1and2(logger *log.Logger) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
 
-	claims, _ := ReadClaimsFromFile("input1.txt")
-	t.PrintCheckpoint(fmt.Sprint("read ", len(claims), " claims"))
+	claims, err := ReadClaimsFromFile("day03/input1.txt")
+	util.Check(err)
+	t.LogCheckpoint(fmt.Sprint("read ", len(claims), " claims"))
 
 	// Create sparse grid of claim counts per square
 	counts := make(map[Square]int)
@@ -109,7 +111,7 @@ func part1and2() {
 			counts[square]++
 		}
 	}
-	t.PrintCheckpoint(fmt.Sprint("counted ", len(counts), " claimed squares"))
+	t.LogCheckpoint(fmt.Sprint("counted ", len(counts), " claimed squares"))
 
 	// Count squares with more than one claim
 	contested := 0
@@ -118,7 +120,7 @@ func part1and2() {
 			contested += 1
 		}
 	}
-	t.PrintCheckpoint(fmt.Sprint("found ", contested, " contested squares"))
+	t.LogCheckpoint(fmt.Sprint("found ", contested, " contested squares"))
 
 	// Find claim where every square was only claimed once
 	var intact *Claim = nil
@@ -135,10 +137,10 @@ func part1and2() {
 			break
 		}
 	}
-	t.PrintCheckpoint(fmt.Sprintf("found intact claim #%v at %v,%v %vx%v",
+	t.LogCheckpoint(fmt.Sprintf("found intact claim #%v at %v,%v %vx%v",
 		intact.Id, intact.X, intact.Y, intact.W, intact.H))
 }
 
-func main() {
-	part1and2()
+func init() {
+	util.RegisterSolution("day03", part1and2)
 }

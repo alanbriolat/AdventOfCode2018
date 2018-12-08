@@ -2,7 +2,7 @@ package util
 
 import "github.com/cheekybits/genny/generic"
 
-////go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "Generic=byte"
+//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "Generic=byte"
 
 type Generic generic.Type
 

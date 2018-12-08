@@ -23,10 +23,10 @@ func CanReact(a, b rune) bool {
 }
 
 func React(bytes []byte) []byte {
-	stack := util.NewGenericStack(len(bytes))
+	stack := util.NewByteStack(len(bytes))
 	for _, b := range bytes {
 		top, ok := stack.Peek()
-		if ok && CanReact(rune(top.(byte)), rune(b)) {
+		if ok && CanReact(rune(top), rune(b)) {
 			stack.Pop()
 		} else {
 			stack.Push(b)
@@ -34,7 +34,7 @@ func React(bytes []byte) []byte {
 	}
 	result := make([]byte, len(stack.Data))
 	for i, b := range stack.Data {
-		result[i] = b.(byte)
+		result[i] = b
 	}
 	return result
 }

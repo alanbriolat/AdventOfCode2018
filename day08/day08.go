@@ -12,47 +12,13 @@ type Node struct {
 	Value int
 }
 
-func NewNode(children, metadata int) Node {
-	return Node{
+func NewNode(children, metadata int) *Node {
+	return &Node{
 		children,
 		metadata,
 		make([]int, 0, children),
 		0,
 	}
-}
-
-type NodeStack struct {
-	Data []Node
-}
-
-func NewNodeStack(size int) NodeStack {
-	return NodeStack{make([]Node, 0, size) }
-}
-
-func (s *NodeStack) Push(x Node) {
-	s.Data = append(s.Data, x)
-}
-
-func (s *NodeStack) Peek() (*Node, bool) {
-	last := len(s.Data) - 1
-	if last < 0 {
-		return nil, false
-	} else {
-		return &s.Data[last], true
-	}
-}
-
-func (s *NodeStack) Pop() (*Node, bool) {
-	if result, ok := s.Peek(); !ok {
-		return nil, ok
-	} else {
-		s.Data = s.Data[:len(s.Data)-1]
-		return result, true
-	}
-}
-
-func (s *NodeStack) Count() int {
-	return len(s.Data)
 }
 
 type Input struct {
@@ -79,12 +45,12 @@ func part1and2() {
 	t.PrintCheckpoint(fmt.Sprintf("read %v numbers", len(input.Data)))
 
 
-	stack := NewNodeStack(0)
+	stack := util.NewGenericStack(0)
 	stack.Push(NewNode(input.Next(), input.Next()))
 	sum := 0
 	var top *Node
 	for stack.Count() > 0 {
-		top, _ = stack.Peek()
+		top = stack.Top().(*Node)
 		switch {
 		case top.UnreadChildren > 0:
 			// Still have child nodes to read - read one and it'll get processed on next loop
@@ -108,7 +74,8 @@ func part1and2() {
 		default:
 			// If there are no child nodes, and all metadata has been processed, finished with this node
 			stack.Pop()
-			if next, ok := stack.Peek(); ok {
+			if stack.Count() > 0 {
+				next := stack.Top().(*Node)
 				next.ChildValues = append(next.ChildValues, top.Value)
 			}
 		}

@@ -10,36 +10,6 @@ import (
 	"unicode"
 )
 
-type Stack struct {
-	Data []byte
-}
-
-func NewStack(size int) Stack {
-	return Stack{make([]byte, 0, size) }
-}
-
-func (s *Stack) Push(b byte) {
-	s.Data = append(s.Data, b)
-}
-
-func (s *Stack) Peek() (byte, bool) {
-	last := len(s.Data) - 1
-	if last < 0 {
-		return 0, false
-	} else {
-		return s.Data[last], true
-	}
-}
-
-func (s *Stack) Pop() (byte, bool) {
-	if result, ok := s.Peek(); !ok {
-		return 0, ok
-	} else {
-		s.Data = s.Data[:len(s.Data)-1]
-		return result, true
-	}
-}
-
 func CanReact(a, b rune) bool {
 	// Swap the case of one byte
 	if unicode.IsUpper(b) {
@@ -52,16 +22,20 @@ func CanReact(a, b rune) bool {
 }
 
 func React(bytes []byte) []byte {
-	stack := NewStack(len(bytes))
+	stack := util.NewStack(len(bytes))
 	for _, b := range bytes {
 		top, ok := stack.Peek()
-		if ok && CanReact(rune(top), rune(b)) {
+		if ok && CanReact(rune(top.(byte)), rune(b)) {
 			stack.Pop()
 		} else {
 			stack.Push(b)
 		}
 	}
-	return stack.Data
+	result := make([]byte, len(stack.Data))
+	for i, b := range stack.Data {
+		result[i] = b.(byte)
+	}
+	return result
 }
 
 func StripUnit(bytes []byte, unit byte) []byte {

@@ -186,7 +186,7 @@ func ReadPoints(name string) []Point {
 	return result
 }
 
-func part1(logger *log.Logger) {
+func part1(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -207,9 +207,11 @@ func part1(logger *log.Logger) {
 
 	bestLocation := worldMap.FindMostRemoteLocation()
 	t.LogCheckpoint(fmt.Sprintf("found destination: %+v", bestLocation))
+
+	return fmt.Sprint(bestLocation.Area)
 }
 
-func part2(logger *log.Logger) {
+func part2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -224,6 +226,8 @@ func part2(logger *log.Logger) {
 
 	area := worldMap.CountPointsWithinRange(10000)
 	t.LogCheckpoint(fmt.Sprintf("found %v points with distance sum < 10000", area))
+
+	return fmt.Sprint(area)
 }
 
 func init() {

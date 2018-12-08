@@ -163,7 +163,7 @@ func ReadEventsFromFile(name string) ([]Event, error) {
 	return result, nil
 }
 
-func part1and2(logger *log.Logger) {
+func part1and2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -197,6 +197,9 @@ func part1and2(logger *log.Logger) {
 	logger.Printf("part2 answer: %v * %v = %v\n",
 		consistentGuard.Id, consistentMinute, consistentGuard.Id * consistentMinute)
 	t.LogCheckpoint("found consistent")
+
+	return fmt.Sprintf("part1 = %v , part2 = %v",
+		sleepyGuard.Id * sleepyMinute, consistentGuard.Id * consistentMinute)
 }
 
 func init() {

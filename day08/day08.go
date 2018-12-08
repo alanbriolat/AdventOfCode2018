@@ -38,7 +38,7 @@ func readInput(filename string) Input {
 	return Input{result[:], result[:]}
 }
 
-func part1and2(logger *log.Logger) {
+func part1and2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -84,6 +84,8 @@ func part1and2(logger *log.Logger) {
 	logger.Println("sum of metadata entries:", sum)
 	logger.Println("value of root node:", top.Value)
 	t.LogCheckpoint(fmt.Sprintf("results"))
+
+	return fmt.Sprintf("part1 = %v , part2 = %v", sum, top.Value)
 }
 
 func init() {

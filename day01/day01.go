@@ -1,6 +1,7 @@
 package day01
 
 import (
+	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"log"
 )
@@ -26,7 +27,7 @@ func (s *state) Update(change int) {
 }
 
 
-func part1and2(logger *log.Logger) {
+func part1and2(logger *log.Logger) string {
 	changes, err := util.ReadIntsFromFile("day01/input1.txt")
 	util.Check(err)
 	state := State()
@@ -34,7 +35,8 @@ func part1and2(logger *log.Logger) {
 	for _, x := range changes {
 		state.Update(x)
 	}
-	logger.Println("Resulting Frequency:", state.Frequency)
+	finalFrequency := state.Frequency
+	logger.Println("Resulting Frequency:", finalFrequency)
 	for !state.FoundRepeat {
 		for _, x := range changes {
 			state.Update(x)
@@ -44,6 +46,8 @@ func part1and2(logger *log.Logger) {
 		}
 	}
 	logger.Println("First repeated Frequency:", state.Repeat)
+
+	return fmt.Sprintf("part1 = %v , part2 = %v", finalFrequency, state.Repeat)
 }
 
 func init() {

@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-type Implementation func(logger *log.Logger)
+type Implementation func(logger *log.Logger) string
 
 type Solution struct {
 	Name string

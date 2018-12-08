@@ -58,7 +58,7 @@ func ReadInput(name string) []byte {
 	return bytes
 }
 
-func part1(logger *log.Logger) {
+func part1(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -68,9 +68,11 @@ func part1(logger *log.Logger) {
 	polymer := React(bytes)
 	logger.Printf("polymer is %v units long\n", len(polymer))
 	t.LogCheckpoint("reacted polymer")
+
+	return fmt.Sprint(len(polymer))
 }
 
-func part2(logger *log.Logger) {
+func part2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -88,6 +90,8 @@ func part2(logger *log.Logger) {
 	}
 	logger.Printf("shortest polymer is %v units long (after removing %v)\n", shortest, best)
 	t.LogCheckpoint("found shortest possible polymer")
+
+	return fmt.Sprint(shortest)
 }
 
 func init() {

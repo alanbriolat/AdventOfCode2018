@@ -1,6 +1,7 @@
 package day02
 
 import (
+	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"log"
 	"strings"
@@ -70,7 +71,7 @@ func SharedString(s1, s2 string) string {
 	return builder.String()
 }
 
-func part1and2(logger *log.Logger) {
+func part1and2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 	lines, err := util.ReadLinesFromFile("day02/input1.txt")
@@ -89,9 +90,9 @@ func part1and2(logger *log.Logger) {
 		}
 		//logger.Println(s, "HasDouble?", counter.HasDouble, "HasTriple?", counter.HasTriple, counter.Counts)
 	}
+	checksum := doubles * triples
 	t.LogCheckpoint("checksum")
-	logger.Println("Checksum:", doubles * triples)
-
+	logger.Println("Checksum:", checksum)
 
 	var closest *Comparison = nil
 	for i, s1 := range lines {
@@ -103,7 +104,10 @@ func part1and2(logger *log.Logger) {
 		}
 	}
 	t.LogCheckpoint("closestComparison")
-	logger.Println("Closest IDs:", closest, "shared string:", SharedString(closest.s1, closest.s2))
+	shared := SharedString(closest.s1, closest.s2)
+	logger.Println("Closest IDs:", closest, "shared string:", shared)
+
+	return fmt.Sprintf("part1 = %v , part2 = %v", checksum, shared)
 }
 
 func init() {

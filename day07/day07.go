@@ -170,7 +170,7 @@ func ReadDependencies(filename string) []Dependency {
 	return result
 }
 
-func part1(logger *log.Logger) {
+func part1(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -186,9 +186,11 @@ func part1(logger *log.Logger) {
 	steps := depTree.ResolveAll()
 	logger.Println("steps:", string(steps))
 	t.LogCheckpoint("resolved dependency graph")
+
+	return string(steps)
 }
 
-func part2(logger *log.Logger) {
+func part2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -204,6 +206,8 @@ func part2(logger *log.Logger) {
 	duration := depTree.ResolveAllParallel(5)
 	logger.Println("completed steps in", duration, "seconds")
 	t.LogCheckpoint("resolved dependency graph")
+
+	return fmt.Sprint(duration)
 }
 
 func init() {

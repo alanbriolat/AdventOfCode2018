@@ -96,7 +96,7 @@ func ReadClaimsFromFile(name string) ([]Claim, error) {
 /*
 
  */
-func part1and2(logger *log.Logger) {
+func part1and2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
@@ -139,6 +139,8 @@ func part1and2(logger *log.Logger) {
 	}
 	t.LogCheckpoint(fmt.Sprintf("found intact claim #%v at %v,%v %vx%v",
 		intact.Id, intact.X, intact.Y, intact.W, intact.H))
+
+	return fmt.Sprintf("part1 = %v , part2 = %v", contested, intact.Id)
 }
 
 func init() {

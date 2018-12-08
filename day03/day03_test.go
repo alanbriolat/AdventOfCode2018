@@ -46,9 +46,9 @@ func TestLinearOverlap(t *testing.T) {
 }
 
 func TestClaim_Overlap(t *testing.T) {
-	a := Claim{1, 3, 4, 4}
-	b := Claim{3, 1, 4, 4}
-	expected := Claim{3, 3, 2, 2}
+	a := Claim{1, 1, 3, 4, 4}
+	b := Claim{2, 3, 1, 4, 4}
+	expected := Claim{0, 3, 3, 2, 2}
 	overlap, err := a.Overlap(b)
 	switch {
 	case err != nil:

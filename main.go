@@ -25,7 +25,15 @@ func main() {
 
 	flag.Parse()
 
+	only := make(map[string]struct{})
+	for _, name := range flag.Args() {
+		only[name] = struct{}{}
+	}
+
 	for _, s := range util.GetSolutions() {
+		if _, ok := only[s.Name]; len(only) > 0 && !ok {
+			continue
+		}
 		var logger *log.Logger
 		if *verbose {
 			logger = log.New(os.Stdout, s.Name + ": ", 0)

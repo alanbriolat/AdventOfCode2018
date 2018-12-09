@@ -6,6 +6,7 @@ import (
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 )
@@ -13,6 +14,8 @@ import (
 type Square struct {
 	X, Y int
 }
+
+type Point Square
 
 type ClaimError string
 
@@ -72,12 +75,13 @@ func LinearOverlap(p1, d1, p2, d2 int) (p, d int) {
 	return p2, util.MinInt(p1+d1-p2, d2)
 }
 
-func ReadClaimsFromFile(name string) ([]Claim, error) {
-	result := make([]Claim, 0, 1500)
+func ReadClaimsFromFile(name string) (result []Claim, min, max Point, err error) {
+	result = make([]Claim, 0, 1500)
+	min = Point{math.MaxInt32, math.MaxInt32}
+	max = Point{math.MinInt32, math.MinInt32}
 	var rawReader io.Reader
-	var err error
 	if rawReader, err = os.Open(name); err != nil {
-		return nil, err
+		return nil, min, max, err
 	}
 	reader := bufio.NewReader(rawReader)
 	for {
@@ -106,34 +110,48 @@ func ReadClaimsFromFile(name string) ([]Claim, error) {
 		bytes, err = reader.ReadBytes('\n')
 		claim.H, err = strconv.Atoi(string(bytes[:len(bytes)-1]))
 		util.Check(err)
-		
+
+		// Keep track of the extent of the fabric
+		min.X = util.MinInt(min.X, claim.X)
+		min.Y = util.MinInt(min.Y, claim.Y)
+		max.X = util.MaxInt(max.X, claim.X + claim.W)
+		max.Y = util.MaxInt(max.Y, claim.Y + claim.H)
+
 		result = append(result, claim)
 	}
-	return result, nil
+	return result, min, max, nil
 }
 
 func part1and2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
-	claims, err := ReadClaimsFromFile("day03/input1.txt")
+	claims, min, max, err := ReadClaimsFromFile("day03/input1.txt")
 	util.Check(err)
 	t.LogCheckpoint(fmt.Sprint("read ", len(claims), " claims"))
 
-	// Create sparse grid of claim counts per square
-	counts := make(map[Square]int)
+	// Create grid of claim counts per square
+	width, height := max.X-min.X, max.Y-min.Y
+	rawCounts := make([]int, width*height)
+	counts := make([][]int, width)
+	for i := 0; i < width; i++ {
+		counts[i], rawCounts = rawCounts[:height], rawCounts[height:]
+	}
+
 	for _, claim := range claims {
 		for _, square := range claim.Squares() {
-			counts[square]++
+			counts[square.X-min.X][square.Y-min.Y]++
 		}
 	}
 	t.LogCheckpoint(fmt.Sprint("counted ", len(counts), " claimed squares"))
 
 	// Count squares with more than one claim
 	contested := 0
-	for _, count := range counts {
-		if count > 1 {
-			contested += 1
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			if counts[x][y] > 1 {
+				contested += 1
+			}
 		}
 	}
 	t.LogCheckpoint(fmt.Sprint("found ", contested, " contested squares"))
@@ -143,7 +161,7 @@ func part1and2(logger *log.Logger) string {
 	for _, claim := range claims {
 		overlapped := false
 		for _, square := range claim.Squares() {
-			if counts[square] > 1 {
+			if counts[square.X-min.X][square.Y-min.Y] > 1 {
 				overlapped = true
 				break
 			}

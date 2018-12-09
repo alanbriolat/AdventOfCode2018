@@ -78,9 +78,9 @@ func (g *GameState) String() string {
 	m := g.Start
 	for {
 		if m == g.Current {
-			fmt.Fprintf(&b, "[%v] ", m.Value)
+			b.WriteString(fmt.Sprint("[", m.Value, "] "))
 		} else {
-			fmt.Fprintf(&b, "%v ", m.Value)
+			b.WriteString(fmt.Sprint(m.Value, " "))
 		}
 
 		m = m.Right
@@ -121,6 +121,12 @@ func part1(logger *log.Logger) string {
 	return fmt.Sprint(highScore)
 }
 
+func part2(logger *log.Logger) string {
+	highScore := part1impl(logger, 441, 7103200)
+	return fmt.Sprint(highScore)
+}
+
 func init() {
 	util.RegisterSolution("day09part1", part1)
+	util.RegisterSolution("day09part2", part2)
 }

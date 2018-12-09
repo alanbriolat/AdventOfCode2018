@@ -54,6 +54,9 @@ type GameState struct {
 func NewGameState(size int) GameState {
 	result := GameState{}
 	result.Marbles = make([]Marble, size + 1)
+	for i := 1; i < len(result.Marbles); i++ {
+		result.Marbles[i].Value = i
+	}
 	m := &result.Marbles[0]
 	result.Start, result.Current, m.Left, m.Right = m, m, m, m
 	return result

@@ -1,11 +1,13 @@
 package day03
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io"
 	"log"
 	"os"
+	"strconv"
 )
 
 type Square struct {
@@ -71,31 +73,45 @@ func LinearOverlap(p1, d1, p2, d2 int) (p, d int) {
 }
 
 func ReadClaimsFromFile(name string) ([]Claim, error) {
-	result := make([]Claim, 0, 100)
-	var reader io.Reader
+	result := make([]Claim, 0, 1500)
+	var rawReader io.Reader
 	var err error
-	if reader, err = os.Open(name); err != nil {
+	if rawReader, err = os.Open(name); err != nil {
 		return nil, err
 	}
+	reader := bufio.NewReader(rawReader)
 	for {
 		claim := Claim{}
-		n, err := fmt.Fscanf(reader, "#%d @ %d,%d: %dx%d",
-			&claim.Id, &claim.X, &claim.Y, &claim.W, &claim.H)
-		if n == 0 || err == io.EOF {
-			// End of input
+		// read start of line
+		bytes, err := reader.ReadBytes('#')
+		if len(bytes) == 0 || err == io.EOF {
+			// end of input
 			break
-		} else if err != nil {
-			// Any other error
-			return nil, err
+		} else {
+			util.Check(err)
 		}
+		// read the claim definition
+		bytes, err = reader.ReadBytes('@')
+		claim.Id, err = strconv.Atoi(string(bytes[:len(bytes)-2]))
+		util.Check(err)
+		bytes, err = reader.ReadBytes(',')
+		claim.X, err = strconv.Atoi(string(bytes[1:len(bytes)-1]))
+		util.Check(err)
+		bytes, err = reader.ReadBytes(':')
+		claim.Y, err = strconv.Atoi(string(bytes[:len(bytes)-1]))
+		util.Check(err)
+		bytes, err = reader.ReadBytes('x')
+		claim.W, err = strconv.Atoi(string(bytes[1:len(bytes)-1]))
+		util.Check(err)
+		bytes, err = reader.ReadBytes('\n')
+		claim.H, err = strconv.Atoi(string(bytes[:len(bytes)-1]))
+		util.Check(err)
+		
 		result = append(result, claim)
 	}
 	return result, nil
 }
 
-/*
-
- */
 func part1and2(logger *log.Logger) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")

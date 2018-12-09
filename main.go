@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+
 	_ "github.com/alanbriolat/AdventOfCode2018/day01"
 	_ "github.com/alanbriolat/AdventOfCode2018/day02"
 	_ "github.com/alanbriolat/AdventOfCode2018/day03"
@@ -43,7 +45,7 @@ func main() {
 		}
 		logger.Println("----------------")
 		result := s.Run(logger)
-		mainLog.Printf("%v answer: %v", s.Name, result)
+		t.LogCheckpoint(fmt.Sprintf("%v answer: %v", s.Name, result))
 		logger.Println("----------------")
 	}
 }

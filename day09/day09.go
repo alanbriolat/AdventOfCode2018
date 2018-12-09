@@ -48,12 +48,14 @@ func (m *Marble) RemoveLeft() *Marble {
 type GameState struct {
 	Start *Marble
 	Current *Marble
+	Marbles []Marble
 }
 
-func NewGameState() GameState {
-	m := &Marble{Value: 0}
-	m.Left, m.Right = m, m
-	result := GameState{Start: m, Current: m}
+func NewGameState(size int) GameState {
+	result := GameState{}
+	result.Marbles = make([]Marble, size + 1)
+	m := &result.Marbles[0]
+	result.Start, result.Current, m.Left, m.Right = m, m, m, m
 	return result
 }
 
@@ -66,7 +68,7 @@ func (g *GameState) Play(x int) (score int) {
 		score += removed.Value
 	} else {
 		g.Current = g.Current.Forward(1)
-		g.Current.AddRight(&Marble{Value: x})
+		g.Current.AddRight(&g.Marbles[x])
 		g.Current = g.Current.Forward(1)
 	}
 
@@ -95,7 +97,7 @@ func part1impl(logger *log.Logger, players, max int) (highScore int) {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
-	state := NewGameState()
+	state := NewGameState(max)
 	scores := make([]int, players)
 	player := 0
 	for i := 1; i <= max; i++ {

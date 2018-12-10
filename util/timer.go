@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
@@ -23,6 +24,12 @@ func (t *Timer) Checkpoint() (sinceStart time.Duration, sinceLast time.Duration)
 	sinceLast = now.Sub(t.LastCheckpoint)
 	t.LastCheckpoint = now
 	return
+}
+
+func (t *Timer) Printf(format string, a ...interface{}) {
+	sinceStart, sinceLast := t.Checkpoint()
+	t.Log.Printf("%v%v (elapsed %v, total %v)\n",
+		t.Prefix, fmt.Sprintf(format, a...), sinceLast, sinceStart)
 }
 
 func (t *Timer) LogCheckpoint(checkpointName string) {

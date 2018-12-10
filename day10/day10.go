@@ -16,10 +16,10 @@ representations might use diagonal lines, which would force 8-direction
 adjacency instead.
 
 Another possible heuristic: minimise the bounding box area instead, on the
-assumption that the stars are converging.
+assumption that the message appears when the stars are at their most converged.
 
 Convergence on a solution may not be direct, maybe need a bit of randomised
-hill climbing.
+hill climbing? Will find out by trying a naive solution first.
  */
 package day10
 
@@ -97,6 +97,7 @@ func ParseStar(star *Star, input string) (err error) {
 
 type StarField struct {
 	Stars []Star
+	Time int
 	Lookup map[Vec2D]struct{}
 	Min, Max Vec2D
 }
@@ -109,32 +110,23 @@ func NewStarField(lines []string) (result StarField, err error) {
 			return result, err
 		}
 	}
-	result.GenerateLookup()
+	// Make sure lookup has been generated
+	result.TimeTravel(0)
 	return result, nil
 }
 
-func (sf *StarField) GenerateLookup() {
+func (sf *StarField) TimeTravel(time int) {
+	sf.Time = time
 	sf.Min = MaxVec2D()
 	sf.Max = MinVec2D()
 	sf.Lookup = make(map[Vec2D]struct{})
 	for i := range sf.Stars {
 		s := &sf.Stars[i]
-		sf.Lookup[s.Position] = struct{}{}
-		sf.Max.MaxInPlace(s.Position)
-		sf.Min.MinInPlace(s.Position)
+		p := s.Position.Add(s.Velocity.Scale(time))
+		sf.Lookup[p] = struct{}{}
+		sf.Min.MinInPlace(p)
+		sf.Max.MaxInPlace(p)
 	}
-}
-
-// TODO: instead of manipulating the state of the whole starfield, just update
-//		the lookups and area to look into the future
-func (sf *StarField) AdvanceTime(n int) {
-	// Update star positions by 1 second
-	for i := range sf.Stars {
-		s := &sf.Stars[i]
-		s.Position.AddInPlace(s.Velocity.Scale(n))
-	}
-	// Re-generate lookup table
-	sf.GenerateLookup()
 }
 
 func (sf *StarField) Show(star string, space string) string {
@@ -152,101 +144,106 @@ func (sf *StarField) Show(star string, space string) string {
 	return b.String()
 }
 
-func (sf *StarField) HasAdjacent4(p Vec2D) bool {
-	search := []Vec2D{
-		p.Add(Vec2D{1, 0}),
-		p.Add(Vec2D{0, 1}),
-		p.Add(Vec2D{-1, 0}),
-		p.Add(Vec2D{0, -1}),
-	}
-	for _, s := range search {
-		if _, ok := sf.Lookup[s]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-func (sf *StarField) CountOutliers(hasAdjacent func(p Vec2D) bool) int {
-	result := 0
-	for i := range sf.Stars {
-		s := &sf.Stars[i]
-		if !hasAdjacent(s.Position) {
-			result++
-		}
-	}
-	return result
-}
-
 func (sf *StarField) Area() int {
 	return (sf.Max.X - sf.Min.X) * (sf.Max.Y - sf.Min.Y)
 }
 
-func findOptimum(sf *StarField, heuristic func(sf *StarField)int, compare func(a, b int)int) int {
-	value := heuristic(sf)
+/*
+simpleHillClimbing searches the solution space linearly as the fitness improves,
+until the fitness worsens instead, returning the index of the first best
+solution found.
+
+size is the length of the problem space.
+
+fitness(i) is a function that calculates the fitness for index i.
+
+compare(a,b) is a function that evaluates if the fitness has improved or
+	worsened; a positive result means improved, negative means worsened, zero
+	means no change.
+ */
+func simpleHillClimbing(size int, fitness func(i int)int, compare func(a, b int)int) (int, error) {
+	bestIndex := 0
+	value := fitness(bestIndex)
 	newValue := value
 
-	time := 0
-	for ; ; time++ {
-		sf.AdvanceTime(1)
-		newValue = heuristic(sf)
+	for i := 0; i < size; i++ {
+		newValue = fitness(i)
 		check := compare(value, newValue)
-		if check < 0 {
-			sf.AdvanceTime(-1)
-			return time - 1
+		switch {
+		case check < 0:
+			return bestIndex, nil
+		case check > 0:
+			bestIndex = i
+			value = newValue
 		}
-		value = newValue
+	}
+
+	return fitness(size - 1), fmt.Errorf("did not find optimum within first %v solutions", size)
+}
+
+/*
+oscillate searches forwards and backwards with a resolution that decays
+exponentially, switching direction each time the fitness gets worse between
+two consecutive points. Once the resolution is at its minimum and the
+inflection point is encountered again, the solution has been found.
+ */
+func oscillate(resolution int, fitness func(i int)int, compare func(a, b int)int) (int, error) {
+	index := 0
+	value := fitness(index)
+	newValue := value
+
+	for {
+		for compare(value, newValue) >= 0 {
+			value = newValue
+			index += resolution
+			newValue = fitness(index)
+		}
+		if util.AbsInt(resolution) > 1 {
+			resolution = -(resolution / 2)
+			value = newValue
+		} else {
+			return index - resolution, nil
+		}
 	}
 }
 
-// TODO: try starting with an increment value, every time heuristic worsens
-// 		reduce the increment and try again, until increment = 1. Effectively
-//		a binary search with a first stage to find the "end". Will need to be
-//		a bit different to a classical binary search, since it's not one list
-//		of values sorted, it's 2 lists sorted in opposite directions and we're
-//		trying to find the "join".
 func part1impl(logger *log.Logger, filename string) string {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
 	lines, err := util.ReadLinesFromFile(filename)
 	util.Check(err)
+	t.Printf("read %v lines", len(lines))
 
 	starField, err := NewStarField(lines)
 	util.Check(err)
-	//logger.Print("initial:\n", starField.Show("#", " "))
-	//logger.Print("outliers: ", starField.CountOutliers(starField.HasAdjacent4))
-	//for i := 0; i < 3; i++ {
-	//count := starField.CountOutliers(starField.HasAdjacent4)
-	//time := 0
-	//logger.Print("outlier count after ", time, " seconds: ", count)
-	//for ; count > 0; time++ {
-	//	starField.AdvanceTime()
-	//	count = starField.CountOutliers(starField.HasAdjacent4)
-	//	logger.Print("outlier count after ", time, " seconds: ", count)
-	//	//logger.Print("After ", i+1, " seconds:\n", starField.Show("#", " "))
-	//	//logger.Print("outliers: ", starField.CountOutliers(starField.HasAdjacent4))
-	//}
+	t.Printf("read %v stars", len(starField.Stars))
 
-	time := findOptimum(
-		&starField,
-		//func(sf *StarField) int { return sf.CountOutliers(sf.HasAdjacent4) },
-		(*StarField).Area,
-		func(a, b int) int { return a - b },
+	//time, err := simpleHillClimbing(
+	//	math.MaxInt32,
+	//	func(i int)int { starField.TimeTravel(i); return starField.Area() },
+	//	func(a, b int)int { return a - b },
+	//)
+	time, err := oscillate(
+		1000,
+		func(i int)int { starField.TimeTravel(i); return starField.Area() },
+		func(a, b int)int { return a - b },
 	)
+	util.Check(err)
 
-	return fmt.Sprint("after ", time, " seconds:\n", starField.Show("#", " "))
+	starField.TimeTravel(time)
+	return fmt.Sprint("after ", time, " time steps:\n", starField.Show("#", " "))
 }
 
 func part0(logger *log.Logger) string {
 	return part1impl(logger, "day10/input_test.txt")
 }
 
-func part1(logger *log.Logger) string {
+func part1and2(logger *log.Logger) string {
 	return part1impl(logger, "day10/input.txt")
 }
 
 func init() {
 	util.RegisterSolution("day10part0", part0)
-	util.RegisterSolution("day10part1", part1)
+	util.RegisterSolution("day10", part1and2)
 }

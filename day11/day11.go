@@ -15,21 +15,36 @@ const (
 	SIZE = 300
 )
 
+type Grid [][]int
+
+func makeGrid(w, h int) Grid {
+	raw := make([]int, w*h)
+	grid := make([][]int, w)
+	for x := 0; x < w; x++ {
+		grid[x], raw = raw[:w], raw[w:]
+	}
+	return grid
+}
+
 type FuelGrid struct {
 	SerialNo int
-	Grid [][]int
+	Grid Grid
+	Area Grid
 }
 
 func NewFuelGrid(serialNo int) FuelGrid {
 	fg := FuelGrid{SerialNo: serialNo}
-	raw := make([]int, SIZE*SIZE)
-	fg.Grid = make([][]int, SIZE)
+	fg.Grid = makeGrid(SIZE, SIZE)
+	fg.Area = makeGrid(SIZE, SIZE)
 	for x := 0; x < SIZE; x++ {
-		var row []int
-		row, raw = raw[:SIZE], raw[SIZE:]
-		fg.Grid[x] = row
-		for y := 0; y < SIZE; y++ {
-			row[y] = fg.CalcCellPower(x + 1, y + 1)
+		for y, colSum := 0, 0; y < SIZE; y++ {
+			power := fg.CalcCellPower(x + 1, y + 1)
+			fg.Grid[x][y] = power
+			colSum += power
+			fg.Area[x][y] = colSum
+			if x > 0 {
+				fg.Area[x][y] += fg.Area[x-1][y]
+			}
 		}
 	}
 	return fg
@@ -38,7 +53,7 @@ func NewFuelGrid(serialNo int) FuelGrid {
 func (fg *FuelGrid) CalcCellPower(x, y int) int {
 	rackId := x + 10
 	result := ((rackId * y) + fg.SerialNo) * rackId
-	result =((result % 1000) / 100) - 5
+	result = ((result % 1000) / 100) - 5
 	return result
 }
 
@@ -47,31 +62,20 @@ func (fg *FuelGrid) CellPower(x, y int) int {
 }
 
 func (fg *FuelGrid) GroupPower(x, y, size int) int {
-	initX, initY := x, y
-	maxX, maxY := x + size - 1, y + size - 1
-	result := 0
-	for x = initX; x <= maxX; x++ {
-		for y = initY; y <= maxY; y++ {
-			power := fg.CellPower(x, y)
-			result += power
-		}
-	}
-	return result
-}
-
-/*
-EdgePower finds the sum of power values along the right and bottom edges of the
-area defined by (minX, minY) to (maxX, maxY).
- */
-func (fg *FuelGrid) EdgePower(minX, maxX, minY, maxY int) int {
-	result := 0
-	for x := minX; x <= maxX; x++ {
-		result += fg.CellPower(x, maxY)
-	}
-	// Avoid double-counting (maxX, maxY)!
-	for y := minY; y < maxY; y++ {
-		result += fg.CellPower(maxX, y)
-	}
+	// Adjust to grid coordinates
+	x -= 1
+	y -= 1
+	// Calculate bottom-right corner
+	maxX := x+size-1
+	maxY := y+size-1
+	// Find sum at bottom right corner
+	result := fg.Area[maxX][maxY]
+	// Find sum before bottom left
+	if x > 0 { result -= fg.Area[x-1][maxY] }
+	// Find sum before top right
+	if y > 0 { result -= fg.Area[maxX][y-1] }
+	// Find sum before top left
+	if x > 0 && y > 0 { result += fg.Area[x-1][y-1] }
 	return result
 }
 
@@ -105,6 +109,7 @@ func part1impl(logger *log.Logger, serialNo int) (x, y int) {
 	defer t.LogCheckpoint("end")
 
 	fg := NewFuelGrid(serialNo)
+	t.Printf("generated grid")
 	var power int
 	x, y, power = fg.FindBestGroup(3)
 	t.Printf("found best fuel cell group at %v,%v power %v", x, y, power)
@@ -116,6 +121,7 @@ func part2impl(logger *log.Logger, serialNo int) (x, y, size int) {
 	defer t.LogCheckpoint("end")
 
 	fg := NewFuelGrid(serialNo)
+	t.Printf("generated grid")
 	x, y, size, bestPower := fg.FindBestGroupAnySize()
 	t.Printf("found best fuel cell group at %v,%v,%v power %v", x, y, size, bestPower)
 	return x, y, size

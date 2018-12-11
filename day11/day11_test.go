@@ -13,7 +13,7 @@ func TestFuelGrid_PowerLevel(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		fg := FuelGrid{SerialNo: table.serialNo}
+		fg := NewFuelGrid(table.serialNo)
 		result := fg.CellPower(table.x, table.y)
 		if result != table.power {
 			t.Errorf("%+v != %v", table, result)
@@ -30,7 +30,7 @@ func TestFuelGrid_GroupPower(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		fg := FuelGrid{SerialNo: table.serialNo}
+		fg := NewFuelGrid(table.serialNo)
 		result := fg.GroupPower(table.x, table.y, 3)
 		if result != table.power {
 			t.Errorf("%+v != %v", table, result)
@@ -47,7 +47,7 @@ func TestFuelGrid_FindBestGroup(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		fg := FuelGrid{SerialNo: table.serialNo}
+		fg := NewFuelGrid(table.serialNo)
 		bestX, bestY, bestPower := fg.FindBestGroup(3)
 		if bestX != table.bestX || bestY != table.bestY || bestPower != table.bestPower {
 			t.Errorf("%+v != %v,%v=%v", table, bestX, bestY, bestPower)
@@ -64,7 +64,7 @@ func TestFuelGrid_FindBestGroupAnySize(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		fg := FuelGrid{SerialNo: table.serialNo}
+		fg := NewFuelGrid(table.serialNo)
 		bestX, bestY, bestSize, bestPower := fg.FindBestGroupAnySize()
 		if bestX != table.bestX || bestY != table.bestY ||
 			bestPower != table.bestPower || bestSize != table.bestSize {

@@ -22,9 +22,9 @@ func (fg *FuelGrid) CellPower(x, y int) int {
 	return result
 }
 
-func (fg *FuelGrid) GroupPower(x, y int) int {
+func (fg *FuelGrid) GroupPower(x, y, size int) int {
 	initX, initY := x, y
-	maxX, maxY := x + 2, y + 2
+	maxX, maxY := x + size - 1, y + size - 1
 	result := 0
 	for x = initX; x <= maxX; x++ {
 		for y = initY; y <= maxY; y++ {
@@ -35,11 +35,29 @@ func (fg *FuelGrid) GroupPower(x, y int) int {
 	return result
 }
 
-func (fg *FuelGrid) FindBestGroup() (bestX, bestY, bestPower int) {
+/*
+EdgePower finds the sum of power values along the right and bottom edges of the
+area defined by (minX, minY) to (maxX, maxY).
+ */
+func (fg *FuelGrid) EdgePower(minX, maxX, minY, maxY int) int {
+	result := 0
+	for x := minX; x <= maxX; x++ {
+		result += fg.CellPower(x, maxY)
+	}
+	// Avoid double-counting (maxX, maxY)!
+	for y := minY; y < maxY; y++ {
+		result += fg.CellPower(maxX, y)
+	}
+	return result
+}
+
+func (fg *FuelGrid) FindBestGroup(size int) (bestX, bestY, bestPower int) {
 	bestX, bestY, bestPower = 0, 0, math.MinInt32
-	for x := 1; x <= (300 - 2); x++ {
-		for y := 1; y <= (300 - 2); y++ {
-			if power := fg.GroupPower(x, y); power > bestPower {
+	maxX := 300 - size + 1
+	maxY := maxX
+	for x := 1; x <= maxX; x++ {
+		for y := 1; y <= maxY; y++ {
+			if power := fg.GroupPower(x, y, size); power > bestPower {
 				bestX, bestY, bestPower = x, y, power
 			}
 		}
@@ -47,22 +65,49 @@ func (fg *FuelGrid) FindBestGroup() (bestX, bestY, bestPower int) {
 	return
 }
 
-func impl(logger *log.Logger, serialNo int) (x, y int) {
+func (fg *FuelGrid) FindBestGroupAnySize() (bestX, bestY, bestSize, bestPower int) {
+	x, y, size, bestPower := 0, 0, 0, math.MinInt32
+	for i := 1; i <= 300; i++ {
+		groupX, groupY, groupPower := fg.FindBestGroup(i)
+		if groupPower > bestPower {
+			x, y, size, bestPower = groupX, groupY, i, groupPower
+		}
+	}
+	return x, y, size, bestPower
+}
+
+func part1impl(logger *log.Logger, serialNo int) (x, y int) {
 	t := util.NewTimer(logger, "")
 	defer t.LogCheckpoint("end")
 
 	fg := FuelGrid{SerialNo: serialNo}
 	var power int
-	x, y, power = fg.FindBestGroup()
+	x, y, power = fg.FindBestGroup(3)
 	t.Printf("found best fuel cell group at %v,%v power %v", x, y, power)
 	return x, y
 }
 
+func part2impl(logger *log.Logger, serialNo int) (x, y, size int) {
+	t := util.NewTimer(logger, "")
+	defer t.LogCheckpoint("end")
+
+	fg := FuelGrid{SerialNo: serialNo}
+	x, y, size, bestPower := fg.FindBestGroupAnySize()
+	t.Printf("found best fuel cell group at %v,%v,%v power %v", x, y, size, bestPower)
+	return x, y, size
+}
+
 func part1(logger *log.Logger) string {
-	x, y := impl(logger, 7315)
+	x, y := part1impl(logger, 7315)
 	return fmt.Sprint(x, ",", y)
+}
+
+func part2(logger *log.Logger) string {
+	x, y, size := part2impl(logger, 7315)
+	return fmt.Sprint(x, ",", y, ",", size)
 }
 
 func init() {
 	util.RegisterSolution("day11part1", part1)
+	util.RegisterSolution("day11part2", part2)
 }

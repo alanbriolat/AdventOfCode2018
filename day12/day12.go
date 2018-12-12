@@ -40,7 +40,12 @@ func NewCellularAutomaton(initialState string, patterns []string) CellularAutoma
 	}
 	for _, p := range patterns {
 		i := patternIndex(p[0:5])
-		ca.Patterns[i] = p[9]
+		if p[9] == False {
+			ca.Patterns[i] = p[9]
+		} else {
+			// give the patterns "names" to make patterns easier to spot
+			ca.Patterns[i] = byte(';' + i)
+		}
 	}
 	return ca
 }
@@ -73,7 +78,7 @@ func (ca *CellularAutomaton) IndexSum() int {
 	offset := ca.Generation * Growth / 2
 	sum := 0
 	for i, v := range ca.State {
-		if v == True {
+		if v != False {
 			sum += i - offset
 		}
 	}
@@ -87,7 +92,7 @@ it into an integer.
 func patternIndex(pattern string) int {
 	index := 0
 	for i := 0; i < len(pattern); i++ {
-		if pattern[i] == True {
+		if pattern[i] != False {
 			index |= 1 << uint8(len(pattern)-i-1)
 		}
 	}
@@ -106,14 +111,25 @@ func part1(logger *log.Logger, filename string, generations int) int {
 	defer t.LogCheckpoint("end")
 
 	ca := readInput(filename)
-	//logger.Printf("%+v", ca)
-	//logger.Printf("%s", ca.String())
-	for i := 0; i < 20; i++ {
-		ca.Advance()
-		//logger.Printf("%s", ca.String())
-	}
+	t.LogCheckpoint("read input")
 
-	return ca.IndexSum()
+	sum := ca.IndexSum()
+	sumDiff := sum
+	sumDiffDiff := sum
+	var i int
+	for i = 0; i < generations && sumDiffDiff != 0; i++ {
+		ca.Advance()
+		newSum := ca.IndexSum()
+		newSumDiff := newSum - sum
+		sumDiffDiff = newSumDiff - sumDiff
+		sum = newSum
+		sumDiff = newSumDiff
+	}
+	remaining := generations - i
+	t.Printf("ran %d generations, fast-forwarding by %d", i, remaining)
+	sum += remaining * sumDiff
+
+	return sum
 }
 
 func init() {
@@ -121,6 +137,10 @@ func init() {
 		return fmt.Sprint(part1(logger,"day12/input_test.txt", 20))
 	})
 	util.RegisterSolution("day12part1", func(logger *log.Logger) string {
-		return fmt.Sprint(part1(logger,"day12/input.txt", 20)
+		return fmt.Sprint(part1(logger,"day12/input.txt", 20))
+	})
+
+	util.RegisterSolution("day12part2", func(logger *log.Logger) string {
+		return fmt.Sprint(part1(logger,"day12/input.txt", 50000000000))
 	})
 }

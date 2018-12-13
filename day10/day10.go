@@ -27,64 +27,12 @@ import (
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"log"
-	"math"
 	"strconv"
 	"strings"
 )
 
-type Vec2D struct {
-	X, Y int
-}
-
-func MaxVec2D() Vec2D {
-	return Vec2D{math.MaxInt32, math.MaxInt32}
-}
-
-func MinVec2D() Vec2D {
-	return Vec2D{math.MinInt32, math.MinInt32}
-}
-
-func (v *Vec2D) Add(o Vec2D) Vec2D {
-	result := *v
-	result.AddInPlace(o)
-	return result
-}
-
-func (v *Vec2D) Sub(o Vec2D) Vec2D {
-	result := *v
-	result.SubInPlace(o)
-	return result
-}
-
-func (v *Vec2D) Scale(s int) Vec2D {
-	result := *v
-	result.X *= s
-	result.Y *= s
-	return result
-}
-
-func (v *Vec2D) AddInPlace(o Vec2D) {
-	v.X += o.X
-	v.Y += o.Y
-}
-
-func (v *Vec2D) SubInPlace(o Vec2D) {
-	v.X -= o.X
-	v.Y -= o.Y
-}
-
-func (v *Vec2D) MinInPlace(o Vec2D) {
-	if o.X < v.X { v.X = o.X }
-	if o.Y < v.Y { v.Y = o.Y }
-}
-
-func (v *Vec2D) MaxInPlace(o Vec2D) {
-	if o.X > v.X { v.X = o.X }
-	if o.Y > v.Y { v.Y = o.Y }
-}
-
 type Star struct {
-	Position, Velocity Vec2D
+	Position, Velocity util.Vec2D
 }
 
 func ParseStar(star *Star, input string) (err error) {
@@ -98,8 +46,8 @@ func ParseStar(star *Star, input string) (err error) {
 type StarField struct {
 	Stars []Star
 	Time int
-	Lookup map[Vec2D]struct{}
-	Min, Max Vec2D
+	Lookup map[util.Vec2D]struct{}
+	Min, Max util.Vec2D
 }
 
 func NewStarField(lines []string) (result StarField, err error) {
@@ -117,9 +65,9 @@ func NewStarField(lines []string) (result StarField, err error) {
 
 func (sf *StarField) TimeTravel(time int) {
 	sf.Time = time
-	sf.Min = MaxVec2D()
-	sf.Max = MinVec2D()
-	sf.Lookup = make(map[Vec2D]struct{})
+	sf.Min = util.MaxVec2D()
+	sf.Max = util.MinVec2D()
+	sf.Lookup = make(map[util.Vec2D]struct{})
 	for i := range sf.Stars {
 		s := &sf.Stars[i]
 		p := s.Position.Add(s.Velocity.Scale(time))
@@ -133,7 +81,7 @@ func (sf *StarField) Show(star string, space string) string {
 	b := strings.Builder{}
 	for y := sf.Min.Y; y <= sf.Max.Y; y++ {
 		for x := sf.Min.X; x <= sf.Max.X; x++ {
-			if _, ok := sf.Lookup[Vec2D{x, y}]; ok {
+			if _, ok := sf.Lookup[util.Vec2D{x, y}]; ok {
 				b.WriteString(star)
 			} else {
 				b.WriteString(space)

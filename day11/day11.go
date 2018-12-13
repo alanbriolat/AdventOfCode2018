@@ -15,27 +15,16 @@ const (
 	SIZE = 300
 )
 
-type Grid [][]int
-
-func makeGrid(w, h int) Grid {
-	raw := make([]int, w*h)
-	grid := make([][]int, w)
-	for x := 0; x < w; x++ {
-		grid[x], raw = raw[:w], raw[w:]
-	}
-	return grid
-}
-
 type FuelGrid struct {
 	SerialNo int
-	Grid Grid
-	Area Grid
+	Grid     util.IntGrid
+	Area     util.IntGrid
 }
 
 func NewFuelGrid(serialNo int) FuelGrid {
 	fg := FuelGrid{SerialNo: serialNo}
-	fg.Grid = makeGrid(SIZE, SIZE)
-	fg.Area = makeGrid(SIZE, SIZE)
+	fg.Grid = util.NewIntGrid(SIZE, SIZE)
+	fg.Area = util.NewIntGrid(SIZE, SIZE)
 	for x := 0; x < SIZE; x++ {
 		for y, colSum := 0, 0; y < SIZE; y++ {
 			power := fg.CalcCellPower(x + 1, y + 1)

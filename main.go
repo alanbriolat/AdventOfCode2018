@@ -16,6 +16,7 @@ import (
 	_ "github.com/alanbriolat/AdventOfCode2018/day10"
 	_ "github.com/alanbriolat/AdventOfCode2018/day11"
 	_ "github.com/alanbriolat/AdventOfCode2018/day12"
+	_ "github.com/alanbriolat/AdventOfCode2018/day13"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io/ioutil"
 	"log"

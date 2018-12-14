@@ -50,6 +50,8 @@ func part2impl(logger *log.Logger, match []byte) int {
 	recipes = append(recipes, 3, 7)
 	elves := [2]int{0, 1}
 
+	next := make([]byte, 0, 2)
+
 	matchStart := 0
 	matched := false
 
@@ -64,8 +66,14 @@ func part2impl(logger *log.Logger, match []byte) int {
 			sum += recipes[i]
 		}
 		// Turn the score total into more recipes
-		for _, x := range []byte(fmt.Sprint(sum)) {
-			recipes = append(recipes, x-'0') // Convert ASCII digit to integer
+		next = append(next, sum / 10)
+		if next[0] == 0 {
+			// If no first digit, don't include an extra 0 recipe
+			next = next[:0]
+		}
+		next = append(next, sum % 10)
+		for _, x := range next {
+			recipes = append(recipes, x)
 			if !matched && matchStart+len(match) <= len(recipes) {
 				matched = bytes.Equal(match, recipes[matchStart:matchStart+len(match)])
 				if !matched {
@@ -73,12 +81,14 @@ func part2impl(logger *log.Logger, match []byte) int {
 				}
 			}
 		}
+		// Reset for next iteration
+		next = next[:0]
 		// Move the elves
 		for i := range elves {
 			elves[i] = (elves[i] + 1 + int(recipes[elves[i]])) % len(recipes)
 		}
 	}
-	
+
 	return matchStart
 }
 

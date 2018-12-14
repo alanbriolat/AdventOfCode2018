@@ -30,9 +30,10 @@ func part1impl(logger *log.Logger, previous int, slice int) []byte {
 			sum += recipes[i]
 		}
 		// Turn the score total into more recipes
-		for _, x := range []byte(fmt.Sprint(sum)) {
-			recipes = append(recipes, x-'0') // Convert ASCII digit to integer
+		if next := sum / 10; next != 0 {
+			recipes = append(recipes, next)
 		}
+		recipes = append(recipes, sum % 10)
 		// Move the elves
 		for i := range elves {
 			elves[i] = (elves[i] + 1 + int(recipes[elves[i]])) % len(recipes)

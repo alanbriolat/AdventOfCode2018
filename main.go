@@ -18,6 +18,7 @@ import (
 	_ "github.com/alanbriolat/AdventOfCode2018/day12"
 	_ "github.com/alanbriolat/AdventOfCode2018/day13"
 	_ "github.com/alanbriolat/AdventOfCode2018/day14"
+	_ "github.com/alanbriolat/AdventOfCode2018/day15"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"io/ioutil"
 	"log"

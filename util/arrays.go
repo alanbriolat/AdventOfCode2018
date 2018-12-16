@@ -1,6 +1,6 @@
 package util
 
-//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "Generic=int,byte"
+//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "Generic=int,byte,bool"
 
 // Already defined in stack.go
 //type Generic generic.Type

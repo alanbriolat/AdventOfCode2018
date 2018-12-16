@@ -225,10 +225,17 @@ func (u *Unit) FindPath(destinations []util.Vec2D) ([]util.Vec2D, error) {
 				// Position we've never seen before, add to the queue
 				openSet = append(openSet, neighbour)
 				visited.Set(neighbour)
-			} else if nScore >= g(neighbour) {
+			} else if nScore > g(neighbour) {
+				// Already a better path to neighbour
+				continue
+			} else if nScore == g(neighbour) && !tieBreak(current, cameFrom[neighbour]) {
+				// Already an equal path to neighbour which came from higher in
+				// the "reading order". The tendency to follow the reading order
+				// also means a square will be visited from a higher reading
+				// order square if possible.
 				continue
 			}
-			// This position is already in the queue, and we've found a quicker path to it
+			// This position is already in the queue, and we've found a better path to it
 			cameFrom[neighbour] = current
 			gScore[neighbour] = nScore
 			fScore[neighbour] = nScore + h(neighbour)
@@ -274,32 +281,55 @@ func NewBattle(input []string) Battle {
 	return b
 }
 
+func (b *Battle) CreateOverlay() BitMap {
+	return BitMap(util.NewBoolGrid(b.MapSize.X, b.MapSize.Y))
+}
+
+func (b *Battle) CreateOverlapFromPoints(points []util.Vec2D) BitMap {
+	result := b.CreateOverlay()
+	for _, p := range points {
+		result.Set(p)
+	}
+	return result
+}
+
 func (b *Battle) String() string {
+	return b.MapView(b.CreateOverlay(), '!', true)
+}
+
+func (b *Battle) MapView(overlay BitMap, overlayChar byte, withUnits bool) string {
 	sb := strings.Builder{}
 	sb.Grow(b.MapSize.X*b.MapSize.Y + len(b.Units)*12)
 
 	for y := 0; y < b.MapSize.Y; y++ {
 		units := make([]byte, 0)
 		for x := 0; x < b.MapSize.X; x++ {
-			switch i := b.Map[x][y]; i {
-			case MapWall:
-				sb.WriteByte(InputWall)
-			case MapFloor:
-				sb.WriteByte(InputFloor)
-			default:
-				units = append(units, i)
-				switch b.Units[i].IsGoblin {
-				case false:
-					sb.WriteByte(InputElf)
-				case true:
-					sb.WriteByte(InputGoblin)
+			p := util.Vec2D{x, y}
+			if overlay.Get(p) {
+				sb.WriteByte(overlayChar)
+			} else {
+				switch i := b.Map[x][y]; i {
+				case MapWall:
+					sb.WriteByte(InputWall)
+				case MapFloor:
+					sb.WriteByte(InputFloor)
+				default:
+					units = append(units, i)
+					switch b.Units[i].IsGoblin {
+					case false:
+						sb.WriteByte(InputElf)
+					case true:
+						sb.WriteByte(InputGoblin)
+					}
 				}
 			}
 		}
-		sb.WriteString("   ")
-		for _, i := range units {
-			sb.WriteByte(' ')
-			sb.WriteString(b.Units[i].String())
+		if withUnits {
+			sb.WriteString("   ")
+			for _, i := range units {
+				sb.WriteByte(' ')
+				sb.WriteString(b.Units[i].String())
+			}
 		}
 		sb.WriteByte('\n')
 	}
@@ -428,34 +458,36 @@ func (b *Battle) RemainingHitPoints() int {
 
 func (b *Battle) NextRound() (combatEnded bool) {
 	b.SortUnits()
-	fmt.Print("start of round:\n", b.String())
+	//fmt.Print("start of round:\n", b.String())
 
 	for _, u := range b.Units {
 		if !u.IsAlive() {
 			// Dead units don't move!
 			continue
 		}
-		fmt.Printf("new turn: %s\n", u.String())
+		//fmt.Printf("new turn: %s\n", u.String())
+		//fmt.Print("reachable overlay:\n", b.MapView(u.Reachable(), '+', false))
 		// Find targets
 		targets := b.FindTargets(u)
 		if len(targets) == 0 {
 			// Combat ended, one side has no remaining units
-			fmt.Println("  no targets, combat ended")
+			//fmt.Println("  no targets, combat ended")
 			return true
 		}
 		// Find path to nearest position in range of a target, and move towards it
 		destinations := b.FindDestinations(u, targets)
-		fmt.Println("  destinations:", destinations)
+		//fmt.Println("  destinations:", destinations)
+		//fmt.Print("destination overlay:\n", b.MapView(b.CreateOverlapFromPoints(destinations), '@', false))
 		path, err := u.FindPath(destinations)
 		if err != nil {
 			// Can't find any targets, so end turn
-			fmt.Println("  no path found")
+			//fmt.Println("  no path found")
 			continue
 		}
-		fmt.Println("  path found:", path)
+		//fmt.Println("  path found:", path)
 		if len(path) > 0 {
 			// Not already in position to attack, so move 1 step
-			fmt.Println("  moving from", u.Position, "to", path[0])
+			//fmt.Println("  moving from", u.Position, "to", path[0])
 			b.MoveUnit(u, path[0])
 		}
 		// Find best adjacent enemy
@@ -483,10 +515,10 @@ func (b *Battle) NextRound() (combatEnded bool) {
 		}
 		// If we have an enemy, attack it
 		if target != nil {
-			fmt.Println("  attacking target:", target.String())
+			//fmt.Println("  attacking target:", target.String())
 			b.AttackUnit(target, u.AttackPower)
 			if !target.IsAlive() {
-				fmt.Println("  killed target:", target.String())
+				//fmt.Println("  killed target:", target.String())
 			}
 		}
 	}
@@ -495,6 +527,7 @@ func (b *Battle) NextRound() (combatEnded bool) {
 
 func part1impl(logger *log.Logger, input []string, maxRounds int, interactive bool) (rounds, remainingHP int) {
 	battle := NewBattle(input)
+	//logger.Printf("input:\n%s\n", battle.MapView(battle.CreateOverlay(), '+', false))
 	combatEnded := false
 	reader := bufio.NewReader(os.Stdin)
 	var i int
@@ -504,6 +537,7 @@ func part1impl(logger *log.Logger, input []string, maxRounds int, interactive bo
 			reader.ReadString('\n')
 		}
 		combatEnded = battle.NextRound()
+		//logger.Printf("end of round %d:\n%s\n", i+1, battle.MapView(battle.CreateOverlay(), '+', false))
 	}
 	return i - 1, battle.RemainingHitPoints()
 }
@@ -522,6 +556,6 @@ func init() {
 		return part1(logger, "day15/input_test2.txt", 50, false)
 	})
 	util.RegisterSolution("day15part1", func(logger *log.Logger) string {
-		return part1(logger, "day15/input.txt", math.MaxInt32, true)
+		return part1(logger, "day15/input.txt", math.MaxInt32, false)
 	})
 }

@@ -525,6 +525,24 @@ func (b *Battle) NextRound() (combatEnded bool) {
 	return false
 }
 
+func (b *Battle) BuffElves(power int) {
+	for _, u := range b.Units {
+		if !u.IsGoblin {
+			u.AttackPower = power
+		}
+	}
+}
+
+func (b *Battle) CountDeadElves() int {
+	count := 0
+	for _, u := range b.Units {
+		if !u.IsGoblin && !u.IsAlive() {
+			count++
+		}
+	}
+	return count
+}
+
 func part1impl(logger *log.Logger, input []string, maxRounds int, interactive bool) (rounds, remainingHP int) {
 	battle := NewBattle(input)
 	//logger.Printf("input:\n%s\n", battle.MapView(battle.CreateOverlay(), '+', false))
@@ -548,14 +566,44 @@ func part1(logger *log.Logger, filename string, maxRounds int, interactive bool)
 	return fmt.Sprintf("%dx%d = %d", rounds, remainingHP, rounds*remainingHP)
 }
 
+func part2(logger *log.Logger, filename string) string {
+	input, _ := util.ReadLinesFromFile(filename)
+
+	power := 4
+	rounds := 0
+	remainingHP := 0
+increasePower:
+	for ; ; power++ {
+		b := NewBattle(input)
+		b.BuffElves(power)
+		combatEnded := false
+		for rounds = 0; !combatEnded; rounds++ {
+			combatEnded = b.NextRound()
+			if b.CountDeadElves() > 0 {
+				continue increasePower
+			}
+		}
+		if b.CountDeadElves() == 0 {
+			remainingHP = b.RemainingHitPoints()
+			rounds -= 1
+			break
+		}
+	}
+
+	return fmt.Sprintf("power %d, %dx%d = %d", power, rounds, remainingHP, rounds*remainingHP)
+}
+
 func init() {
-	util.RegisterSolution("day15test1", func(logger *log.Logger) string {
-		return part1(logger, "day15/input_test1.txt", 3, false)
-	})
-	util.RegisterSolution("day15test2", func(logger *log.Logger) string {
-		return part1(logger, "day15/input_test2.txt", 50, false)
-	})
+	//util.RegisterSolution("day15test1", func(logger *log.Logger) string {
+	//	return part1(logger, "day15/input_test1.txt", 3, false)
+	//})
+	//util.RegisterSolution("day15test2", func(logger *log.Logger) string {
+	//	return part1(logger, "day15/input_test2.txt", 50, false)
+	//})
 	util.RegisterSolution("day15part1", func(logger *log.Logger) string {
 		return part1(logger, "day15/input.txt", math.MaxInt32, false)
+	})
+	util.RegisterSolution("day15part2", func(logger *log.Logger) string {
+		return part2(logger, "day15/input.txt")
 	})
 }

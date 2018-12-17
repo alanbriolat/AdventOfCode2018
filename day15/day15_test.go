@@ -153,3 +153,22 @@ func TestEdgeCase(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, b.Units[0].Position)
 	}
 }
+
+func TestEqualPathReadingOrder(t *testing.T) {
+	input := []string{
+		"###########",
+		"#...#.....#",
+		"#G#.......#",
+		"#...#.....#",
+		"#####.....#",
+		"#####....E#",
+		"###########",
+	}
+	b := NewBattle(input)
+	b.NextRound()
+	fmt.Println(b.String())
+	expected := util.Vec2D{1, 1}
+	if b.Units[0].Position != expected {
+		t.Errorf("expected %v, got %v", expected, b.Units[0].Position)
+	}
+}

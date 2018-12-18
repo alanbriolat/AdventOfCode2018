@@ -15,6 +15,7 @@ const (
 	Clay    = '#'
 	Water   = '~'
 	Flowing = '|'
+	Spring  = '+'
 )
 
 type Line struct {
@@ -26,6 +27,8 @@ type Aquifer struct {
 	Width, Height int
 	Data          util.ByteGrid
 	Springs       []util.Vec2D
+	WaterCount    int
+	FlowingCount  int
 }
 
 func NewAquifer(input []Line) Aquifer {
@@ -94,22 +97,25 @@ func (a *Aquifer) At(p util.Vec2D) *byte {
 	return &a.Data[p.X][p.Y]
 }
 
-func (a *Aquifer) Flow() {
-	position := a.Springs[0]
-	a.Springs = a.Springs[1:]
-
-	// Fall until finding something that isn't sand
+func (a *Aquifer) FlowFrom(start util.Vec2D) {
+	position := start
+	fmt.Println("flowing from", position)
+	goDown := util.Vec2D{0, 1}
+	goLeft := util.Vec2D{-1, 0}
+	goRight := util.Vec2D{1, 0}
+	// Flow downwards until something that isn't sand
 	for a.Valid(position) && *a.At(position) == Sand {
 		*a.At(position) = Flowing
-		position.AddInPlace(util.Vec2D{0, 1})
+		a.FlowingCount++
+		position.AddInPlace(goDown)
 	}
 
 	if !a.Valid(position) {
-		// Fell off the map without anything else to do
+		// Fell off the map with nothing else to do
 		return
 	}
 	if *a.At(position) == Flowing {
-		// Collided with another stream, would now follow the same path
+		// Collided with another flow, would now follow the same path
 		return
 	}
 
@@ -117,9 +123,10 @@ func (a *Aquifer) Flow() {
 		p = start
 		closed = false
 		p.AddInPlace(direction)
-		fmt.Println("scanning", direction)
-		scan: for a.Valid(p) {
-			fmt.Println("checking", p)
+		//fmt.Println("scanning", direction)
+	scan:
+		for a.Valid(p) {
+			//fmt.Println("checking", p)
 			switch *a.At(p) {
 			case Clay:
 				// Hit a wall, so gone as far as we can in this direction
@@ -131,16 +138,26 @@ func (a *Aquifer) Flow() {
 				p.SubInPlace(direction)
 				break scan
 			case Sand:
-				// If we ended up "dangling" over more sand, let's stop but create a new spring
-				below := p.Add(util.Vec2D{0, 1})
-				if a.Valid(below) && *a.At(below) == Sand {
-					a.Springs = append(a.Springs, p)
-					p.SubInPlace(direction)
-					break scan
-				} else {
-					// Nothing in the way, let's flow
-					*a.At(p) = Flowing
-					p.AddInPlace(direction)
+				// Can flow into sand
+				*a.At(p) = Flowing
+				a.FlowingCount++
+				// What happens next depends on what's below us
+				below := p.Add(goDown)
+				if a.Valid(below) {
+					// If we ended up "dangling" over more sand, let's flow down (recursively)
+					if *a.At(below) == Sand {
+						a.FlowFrom(below)
+						fmt.Println("resuming", position)
+					}
+					// After that is processed, we can only flow across the top of water or clay
+					switch *a.At(below) {
+					case Water, Clay:
+						// The flow continues
+						p.AddInPlace(direction)
+					default:
+						// We hit the end of the flow
+						break scan
+					}
 				}
 			default:
 				panic("shouldn't be able to flow into water/unknown")
@@ -149,22 +166,35 @@ func (a *Aquifer) Flow() {
 		return
 	}
 
-	// We hit something to spread across, go back up  and start generating water
-	for position.SubInPlace(util.Vec2D{0, 1}); a.Valid(position) && *a.At(position) == Flowing; position.SubInPlace(util.Vec2D{0, 1}) {
-		left, leftClosed := scanToEnd(position, util.Vec2D{-1, 0})
-		right, rightClosed := scanToEnd(position, util.Vec2D{1, 0})
+	// We hit something to spread across, so work our way up, generating water layer by layer
+	for position.SubInPlace(goDown); position.Y >= start.Y && *a.At(position) == Flowing; position.SubInPlace(goDown) {
+		left, leftClosed := scanToEnd(position, goLeft)
+		right, rightClosed := scanToEnd(position, goRight)
 		fmt.Println(left, leftClosed, right, rightClosed)
 		if leftClosed && rightClosed {
-			// Line is capped by clay at both ends, so fill it with water
 			for ; left.X <= right.X; left.X++ {
-				fmt.Println("adding water to", left)
 				*a.At(left) = Water
+				a.WaterCount++
+				a.FlowingCount--
 			}
 		} else {
 			// Line wasn't capped, this line won't fill with water, so stop processing those above it too
 			break
 		}
 	}
+}
+
+func (a *Aquifer) Count() int {
+	result := 0
+	for x := 0; x < a.Width; x++ {
+		for y := 0; y < a.Height; y++ {
+			switch a.Data[x][y] {
+			case Water, Flowing:
+				result++
+			}
+		}
+	}
+	return result
 }
 
 func readInput(filename string) []Line {
@@ -209,23 +239,32 @@ func readInput(filename string) []Line {
 	return result
 }
 
-func part1impl(logger *log.Logger, filename string) string {
+func part1impl(logger *log.Logger, filename string, spring util.Vec2D) string {
 	input := readInput(filename)
 	aquifer := NewAquifer(input)
 	logger.Print("start:\n", aquifer.String())
-	for i := 0; len(aquifer.Springs) > 0; i++ {
-		aquifer.Flow()
-		logger.Printf("after %d flow steps:\n%s", i+1, aquifer.String())
-		logger.Println("new springs:", aquifer.Springs)
-	}
+
+	// Flow the water
+	aquifer.FlowFrom(spring)
+	// The spring doesn't count as reachable by water!
+	*aquifer.At(spring) = Spring
+	aquifer.FlowingCount--
+
+	logger.Print("end:\n", aquifer.String())
+	logger.Println(
+		"flowing =", aquifer.FlowingCount,
+		"water =", aquifer.WaterCount,
+		"total =", aquifer.FlowingCount+aquifer.WaterCount,
+		"counted =", aquifer.Count(),
+	)
 	return ""
 }
 
 func init() {
 	util.RegisterSolution("day17test1", func(logger *log.Logger) string {
-		return part1impl(logger, "day17/input_test.txt")
+		return part1impl(logger, "day17/input_test.txt", util.Vec2D{500, 0})
 	})
 	util.RegisterSolution("day17part1", func(logger *log.Logger) string {
-		return part1impl(logger, "day17/input.txt")
+		return part1impl(logger, "day17/input.txt", util.Vec2D{500, 0})
 	})
 }

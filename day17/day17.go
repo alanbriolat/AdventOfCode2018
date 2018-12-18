@@ -15,7 +15,6 @@ const (
 	Clay    = '#'
 	Water   = '~'
 	Flowing = '|'
-	Spring  = '+'
 )
 
 type Line struct {
@@ -26,19 +25,18 @@ type Aquifer struct {
 	Min, Max      util.Vec2D
 	Width, Height int
 	Data          util.ByteGrid
-	Springs       []util.Vec2D
 	WaterCount    int
 	FlowingCount  int
 }
 
 func NewAquifer(input []Line) Aquifer {
 	a := Aquifer{
-		Min: util.Vec2D{500, 0},
-		Max: util.Vec2D{500, 0},
+		Min: util.MaxVec2D(),
+		Max: util.MinVec2D(),
 	}
 	// Establish the boundary of the map
 	for _, line := range input {
-		fmt.Println("line:", line)
+		//fmt.Println("line:", line)
 		a.Min.MinInPlace(line.Start)
 		a.Max.MaxInPlace(line.End)
 	}
@@ -48,7 +46,7 @@ func NewAquifer(input []Line) Aquifer {
 	// Width and height are inclusive of max
 	a.Width = a.Max.X - a.Min.X + 1
 	a.Height = a.Max.Y - a.Min.Y + 1
-	fmt.Println("min", a.Min, "max", a.Max, "width", a.Width, "height", a.Height)
+	//fmt.Println("min", a.Min, "max", a.Max, "width", a.Width, "height", a.Height)
 	// Create and initialise map data
 	a.Data = util.NewByteGrid(a.Width, a.Height)
 	for x := 0; x < a.Width; x++ {
@@ -70,8 +68,6 @@ func NewAquifer(input []Line) Aquifer {
 			}
 		}
 	}
-	a.Springs = make([]util.Vec2D, 1)
-	a.Springs[0] = util.Vec2D{500, 0}
 	return a
 }
 
@@ -99,7 +95,7 @@ func (a *Aquifer) At(p util.Vec2D) *byte {
 
 func (a *Aquifer) FlowFrom(start util.Vec2D) {
 	position := start
-	fmt.Println("flowing from", position)
+	//fmt.Println("flowing from", position)
 	goDown := util.Vec2D{0, 1}
 	goLeft := util.Vec2D{-1, 0}
 	goRight := util.Vec2D{1, 0}
@@ -147,7 +143,7 @@ func (a *Aquifer) FlowFrom(start util.Vec2D) {
 					// If we ended up "dangling" over more sand, let's flow down (recursively)
 					if *a.At(below) == Sand {
 						a.FlowFrom(below)
-						fmt.Println("resuming", position)
+						//fmt.Println("resuming", position)
 					}
 					// After that is processed, we can only flow across the top of water or clay
 					switch *a.At(below) {
@@ -170,7 +166,7 @@ func (a *Aquifer) FlowFrom(start util.Vec2D) {
 	for position.SubInPlace(goDown); position.Y >= start.Y && *a.At(position) == Flowing; position.SubInPlace(goDown) {
 		left, leftClosed := scanToEnd(position, goLeft)
 		right, rightClosed := scanToEnd(position, goRight)
-		fmt.Println(left, leftClosed, right, rightClosed)
+		//fmt.Println(left, leftClosed, right, rightClosed)
 		if leftClosed && rightClosed {
 			for ; left.X <= right.X; left.X++ {
 				*a.At(left) = Water
@@ -239,32 +235,32 @@ func readInput(filename string) []Line {
 	return result
 }
 
-func part1impl(logger *log.Logger, filename string, spring util.Vec2D) string {
+func part1impl(logger *log.Logger, filename string) (water, flowing int) {
 	input := readInput(filename)
 	aquifer := NewAquifer(input)
-	logger.Print("start:\n", aquifer.String())
+	//logger.Print("start:\n", aquifer.String())
 
 	// Flow the water
+	spring := util.Vec2D{500, aquifer.Min.Y}
 	aquifer.FlowFrom(spring)
-	// The spring doesn't count as reachable by water!
-	*aquifer.At(spring) = Spring
-	aquifer.FlowingCount--
 
-	logger.Print("end:\n", aquifer.String())
+	//logger.Print("end:\n", aquifer.String())
 	logger.Println(
 		"flowing =", aquifer.FlowingCount,
 		"water =", aquifer.WaterCount,
 		"total =", aquifer.FlowingCount+aquifer.WaterCount,
 		"counted =", aquifer.Count(),
 	)
-	return ""
+	return aquifer.WaterCount, aquifer.FlowingCount
 }
 
 func init() {
-	util.RegisterSolution("day17test1", func(logger *log.Logger) string {
-		return part1impl(logger, "day17/input_test.txt", util.Vec2D{500, 0})
-	})
-	util.RegisterSolution("day17part1", func(logger *log.Logger) string {
-		return part1impl(logger, "day17/input.txt", util.Vec2D{500, 0})
+	//util.RegisterSolution("day17test1", func(logger *log.Logger) string {
+	//	water, flowing := part1impl(logger, "day17/input_test.txt")
+	//	return fmt.Sprint(water + flowing)
+	//})
+	util.RegisterSolution("day17part1and2", func(logger *log.Logger) string {
+		water, flowing := part1impl(logger, "day17/input.txt")
+		return fmt.Sprintf("part1 = %d , part2 = %d", water + flowing, water)
 	})
 }

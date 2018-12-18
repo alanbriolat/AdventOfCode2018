@@ -83,6 +83,11 @@ func (f *Forest) CountAll() map[byte]int {
 	return result
 }
 
+func (f *Forest) ResourceValue() int {
+	counts := f.CountAll()
+	return counts[Trees] * counts[Lumberyard]
+}
+
 func (f *Forest) AdvanceTime() {
 	f.Time++
 	newMap := util.NewByteGrid(f.Width, f.Height)
@@ -128,13 +133,67 @@ func part1impl(logger *log.Logger, filename string, duration int) (trees, lumber
 	return counts[Trees], counts[Lumberyard]
 }
 
+func part2impl(logger *log.Logger, filename string, duration int) int {
+	input, err := util.ReadLinesFromFile(filename)
+	util.Check(err)
+	forest := NewForest(input)
+
+	// Resource value at each time step
+	history := make([]int, 0, 10000)
+	// When each resource value was last seen
+	recents := make(map[int]int)
+
+	// Manually fill the 0th timestep
+	history = append(history, forest.ResourceValue())
+	recents[history[0]] = 0
+
+	cycleStart, cycleLength := -1, -1
+
+	for i := 0; ; i++ {
+		forest.AdvanceTime()
+		value := forest.ResourceValue()
+		history = append(history, value)
+		if prev, ok := recents[value]; ok {
+			if prev == forest.Time - 1 {
+				// Ignore immediately repeated values, otherwise a single repeated value
+				// gives a false positive for a cycle
+				continue
+			}
+			// We've seen this value before, let's see if we're in a cycle,
+			// by going back through history from both instances
+			var a, b int
+			for a, b = prev, forest.Time; a >= 0 && b > prev; a, b = a-1, b-1 {
+				if history[a] != history[b] {
+					break
+				}
+			}
+			// If this was a cycle, the for loop should have broken on b == prev
+			if b == prev {
+				cycleStart = prev
+				cycleLength = forest.Time - prev
+				break
+			}
+		}
+		// Keep going
+		recents[value] = forest.Time
+	}
+
+	// Should have found a cycle by now, so can fast-forward time
+	remaining := duration - cycleStart
+	return history[cycleStart + (remaining % cycleLength)]
+}
+
 func init() {
-	util.RegisterSolution("day18test1", func(logger *log.Logger) string {
-		trees, lumberyards := part1impl(logger, "day18/input_test.txt", 10)
-		return fmt.Sprintf("%d x %d = %d", trees, lumberyards, trees*lumberyards)
-	})
+	//util.RegisterSolution("day18test1", func(logger *log.Logger) string {
+	//	trees, lumberyards := part1impl(logger, "day18/input_test.txt", 10)
+	//	return fmt.Sprintf("%d x %d = %d", trees, lumberyards, trees*lumberyards)
+	//})
 	util.RegisterSolution("day18part1", func(logger *log.Logger) string {
 		trees, lumberyards := part1impl(logger, "day18/input.txt", 10)
 		return fmt.Sprintf("%d x %d = %d", trees, lumberyards, trees*lumberyards)
+	})
+	util.RegisterSolution("day18part2", func(logger *log.Logger) string {
+		value := part2impl(logger, "day18/input.txt", 1000000000)
+		return fmt.Sprintf("%d", value)
 	})
 }

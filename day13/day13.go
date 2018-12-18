@@ -232,20 +232,20 @@ func part2(logger *log.Logger, filename string) util.Vec2D {
 }
 
 func init() {
-	util.RegisterSolution("day13part1example", func(logger *log.Logger) string {
-		p := part1(logger, "day13/input_test1.txt")
-		return fmt.Sprint(p.X, ",", p.Y)
-	})
+	//util.RegisterSolution("day13part1example", func(logger *log.Logger) string {
+	//	p := part1(logger, "day13/input_test1.txt")
+	//	return fmt.Sprint(p.X, ",", p.Y)
+	//})
 	
 	util.RegisterSolution("day13part1", func(logger *log.Logger) string {
 		p := part1(logger, "day13/input.txt")
 		return fmt.Sprint(p.X, ",", p.Y)
 	})
 
-	util.RegisterSolution("day13part2example", func(logger *log.Logger) string {
-		p := part2(logger, "day13/input_test2.txt")
-		return fmt.Sprint(p.X, ",", p.Y)
-	})
+	//util.RegisterSolution("day13part2example", func(logger *log.Logger) string {
+	//	p := part2(logger, "day13/input_test2.txt")
+	//	return fmt.Sprint(p.X, ",", p.Y)
+	//})
 
 	util.RegisterSolution("day13part2", func(logger *log.Logger) string {
 		p := part2(logger, "day13/input.txt")

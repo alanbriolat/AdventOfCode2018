@@ -133,9 +133,9 @@ func part1(logger *log.Logger, filename string, generations int) int {
 }
 
 func init() {
-	util.RegisterSolution("day12part0", func(logger *log.Logger) string {
-		return fmt.Sprint(part1(logger,"day12/input_test.txt", 20))
-	})
+	//util.RegisterSolution("day12part0", func(logger *log.Logger) string {
+	//	return fmt.Sprint(part1(logger,"day12/input_test.txt", 20))
+	//})
 	util.RegisterSolution("day12part1", func(logger *log.Logger) string {
 		return fmt.Sprint(part1(logger,"day12/input.txt", 20))
 	})

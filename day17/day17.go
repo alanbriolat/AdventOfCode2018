@@ -259,7 +259,7 @@ func init() {
 	//	water, flowing := part1impl(logger, "day17/input_test.txt")
 	//	return fmt.Sprint(water + flowing)
 	//})
-	util.RegisterSolution("day17part1and2", func(logger *log.Logger) string {
+	util.RegisterSolution("day17", func(logger *log.Logger) string {
 		water, flowing := part1impl(logger, "day17/input.txt")
 		return fmt.Sprintf("part1 = %d , part2 = %d", water + flowing, water)
 	})

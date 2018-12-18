@@ -192,6 +192,6 @@ func part1and2(logger *log.Logger) string {
 }
 
 func init() {
-	util.RegisterSolution("day10part0", part0)
+	//util.RegisterSolution("day10part0", part0)
 	util.RegisterSolution("day10", part1and2)
 }

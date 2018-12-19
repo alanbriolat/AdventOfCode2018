@@ -1,0 +1,87 @@
+(For disambiguation, I refer to registers 0-4 as a-e.)
+
+The code sets up register c with one of two numbers, depending on the initial value of register a:
+- 0 -> 877
+- 1 -> 10,551,277
+
+It then accumulates a sum of factors of c into a, with the following pseudocode:
+    for d in 1..c:
+        for b in 1..c:
+            if d * b == c:
+                a += d
+
+#ip 5
+addi 5 16 5     #  0: jump SETUP (17)
+
+START:
+seti 1 7 3      #  1: d = 1
+
+LOOP_1:
+    while d <= c: run LOOP_2 for every d between 1 and c
+        b = 1
+        LOOP_2
+        d += 1
+seti 1 4 1      #  2: b = 1
+
+LOOP_2: find b where d * b == c, add d to a; in other words, add d to a if it's a factor of c
+    while b <= c:
+        if d * b == c:
+            a += d
+        b += 1
+mulr 3 1 4      #  3: e = d * b
+eqrr 4 2 4      #  4: e = (c == e ? 1 : 0)
+addr 4 5 5      #  5: jump +e
+(if e == 0)
+addi 5 1 5      #  6: jump +1
+(if e == 1)
+addr 3 0 0      #  7: a += d
+(continued, both branches)
+addi 1 1 1      #  8: b += 1
+gtrr 1 2 4      #  9: e = (b > c ? 1 : 0)
+addr 5 4 5      # 10: jump +e
+(if e == 0)
+seti 2 1 5      # 11: jump LOOP_2 (3)
+
+(if e == 1)
+LOOP_1_CONTD:
+addi 3 1 3      # 12: d += 1
+gtrr 3 2 4      # 13: e = (d > c ? 1 : 0)
+addr 4 5 5      # 14: jump +e
+(if e == 0)
+seti 1 4 5      # 15: jump LOOP_1 (2)
+
+START_CONTD:
+(if e == 1)
+mulr 5 5 5      # 16: jump 256 (end)
+
+SETUP:
+    if a == 0:
+        e = (1 * 22) + 19 = 41
+        c = 2^2 * 19 * 11 + e = 877
+    elseif a == 1:
+        e = (27 * 28 + 29) * 30 * 14 * 32 = 10,550,400
+        c = 2^2 * 19 * 11 + 41 + e = 877 + 10,550,400 = 10,551,277
+        a = 0
+addi 2 2 2      # 17: c += 2
+mulr 2 2 2      # 18: c = c^2
+mulr 5 2 2      # 19: c *= 19
+muli 2 11 2     # 20: c *= 11
+addi 4 1 4      # 21: e += 1
+mulr 4 5 4      # 22: e *= 22
+addi 4 19 4     # 23: e += 19
+addr 2 4 2      # 24: c += e
+addr 5 0 5      # 25: jump +a
+
+(if a == 0)
+seti 0 9 5      # 26: jump START (1)
+
+(if a == 1)
+setr 5 7 4      # 27: e = 27
+mulr 4 5 4      # 28: e *= 28
+addr 5 4 4      # 29: e += 29
+mulr 5 4 4      # 30: e *= 30
+muli 4 14 4     # 31: e *= 14
+mulr 4 5 4      # 32: e *= 32
+addr 2 4 2      # 33: c += e
+seti 0 9 0      # 34: a = 0
+seti 0 6 5      # 35: jump START (1)

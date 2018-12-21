@@ -2,7 +2,7 @@ package util
 
 import "github.com/cheekybits/genny/generic"
 
-//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "Generic=byte"
+//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "Generic=byte,string"
 
 type Generic generic.Type
 
@@ -32,12 +32,32 @@ func (s *GenericStack) Pop() (Generic, bool) {
 	}
 }
 
+func (s *GenericStack) PopMany(n int) ([]Generic, bool) {
+	result := make([]Generic, 0, n)
+	for ; n > 0 && len(s.Data) > 0; n-- {
+		if next, ok := s.Pop(); ok {
+			result = append(result, next)
+		} else {
+			return result, false
+		}
+	}
+	return result, true
+}
+
 func (s *GenericStack) Peek() (Generic, bool) {
 	last := len(s.Data) - 1
 	if last < 0 {
 		return s.Nil, false
 	} else {
 		return s.Data[last], true
+	}
+}
+
+func (s *GenericStack) PeekMany(n int) ([]Generic, bool) {
+	if len(s.Data) < n {
+		return nil, false
+	} else {
+		return s.Data[len(s.Data)-n:], true
 	}
 }
 

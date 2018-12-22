@@ -118,6 +118,7 @@ func (u *Unit) Reachable() BitMap {
 	return reachable
 }
 
+//go:generate genny -in=../util/astar.go -out=gen-astar.go -pkg=day15 gen "SearchNode=util.Vec2D"
 /*
 FindPath finds the shortest path to reach a destination, implemented as A*
 search.
@@ -133,116 +134,23 @@ The following details are specific to the requirements of this problem:
 Mostly just following the pseudocode at https://en.wikipedia.org/wiki/A*_search_algorithm
 */
 func (u *Unit) FindPath(destinations []util.Vec2D) ([]util.Vec2D, error) {
-	if len(destinations) == 0 {
-		return nil, fmt.Errorf("no destinations")
+	search := AStarSearchContext{
+		Start:        u.Position,
+		Destinations: destinations,
+		NodeCountMax: u.Battle.NonWallCount,
+		Adjacent: func(n util.Vec2D) []util.Vec2D {
+			return u.Battle.Adjacent(n, true)
+		},
+		Heuristic: func(n1, n2 util.Vec2D) int {
+			return n2.Sub(n1).Manhattan()
+		},
+		Cost: func(n1, n2 util.Vec2D) int {
+			return 1
+		},
+		TieBreak: tieBreak,
 	}
-
-	// f(n) = g(n) + h(n)
-	// g(n): cost to get to n from start
-	// h(n): estimate of cost from n to goal
-	gScore := make(map[util.Vec2D]int)
-	g := func(n util.Vec2D) int {
-		if result, ok := gScore[n]; ok {
-			return result
-		} else {
-			return math.MaxInt32
-		}
-	}
-	fScore := make(map[util.Vec2D]int)
-	f := func(n util.Vec2D) int {
-		if result, ok := fScore[n]; ok {
-			return result
-		} else {
-			return math.MaxInt32
-		}
-	}
-	h := func(n util.Vec2D) int {
-		min := math.MaxInt32
-		for _, d := range destinations {
-			if distance := d.Sub(n).Manhattan(); distance < min {
-				min = distance
-			}
-		}
-		return min
-	}
-
-	// Position processing queue
-	openSet := make([]util.Vec2D, 0, u.Battle.NonWallCount)
-	// Positions already processed
-	closedSet := BitMap(util.NewBoolGrid(u.Battle.MapSize.X, u.Battle.MapSize.Y))
-	// Positions queued or processed
-	visited := BitMap(util.NewBoolGrid(u.Battle.MapSize.X, u.Battle.MapSize.Y))
-
-	start := u.Position
-	gScore[start] = 0
-	fScore[start] = h(start)
-	openSet = append(openSet, start)
-	visited.Set(start)
-
-	// Keep track of most efficient path to each position
-	cameFrom := make(map[util.Vec2D]util.Vec2D)
-	path := func(destination util.Vec2D) []util.Vec2D {
-		result := make([]util.Vec2D, 0, g(destination)+1)
-		next := destination
-		for next != start {
-			result = append(result, next)
-			next = cameFrom[next]
-		}
-		// Reverse the path, so it's from start to goal
-		for left, right := 0, len(result)-1; left < right; left, right = left+1, right-1 {
-			result[left], result[right] = result[right], result[left]
-		}
-		return result
-	}
-
-	for len(openSet) > 0 {
-		// Sort by f(n), tie-break on reading order
-		sort.Slice(openSet, func(i, j int) bool {
-			p1, p2 := openSet[i], openSet[j]
-			f1, f2 := f(p1), f(p2)
-			return f1 < f2 || (f1 == f2 && tieBreak(p1, p2))
-		})
-		// Get most promising next position
-		var current util.Vec2D
-		current, openSet = openSet[0], openSet[1:]
-		// Did we find a goal?
-		for _, d := range destinations {
-			if current == d {
-				return path(current), nil
-			}
-		}
-		// Don't visit this position again
-		closedSet.Set(current)
-
-		// Score potential next positions
-		nScore := gScore[current] + 1  // Distance from start to neighbour (path cost is always 1)
-		for _, neighbour := range u.Battle.Adjacent(current, true) {
-			if closedSet.Get(neighbour) {
-				// Already have a shortest path to this neighbour
-				continue
-			}
-			if !visited.Get(neighbour) {
-				// Position we've never seen before, add to the queue
-				openSet = append(openSet, neighbour)
-				visited.Set(neighbour)
-			} else if nScore > g(neighbour) {
-				// Already a better path to neighbour
-				continue
-			} else if nScore == g(neighbour) && !tieBreak(current, cameFrom[neighbour]) {
-				// Already an equal path to neighbour which came from higher in
-				// the "reading order". The tendency to follow the reading order
-				// also means a square will be visited from a higher reading
-				// order square if possible.
-				continue
-			}
-			// This position is already in the queue, and we've found a better path to it
-			cameFrom[neighbour] = current
-			gScore[neighbour] = nScore
-			fScore[neighbour] = nScore + h(neighbour)
-		}
-	}
-
-	return nil, fmt.Errorf("no path found to any destination")
+	result, err := AStarSearch(&search)
+	return result, err
 }
 
 type Battle struct {

@@ -1,13 +1,64 @@
 package util
 
 import (
+	"container/heap"
 	"fmt"
 	"github.com/cheekybits/genny/generic"
 	"math"
-	"sort"
 )
 
 type SearchNode generic.Type
+
+// Priority queue based on https://golang.org/pkg/container/heap/#example__priorityQueue
+type SearchQueueItem struct {
+	value    SearchNode
+	priority func() int
+	index    int
+}
+
+type SearchQueue struct {
+	ctx *AStarSearchContext
+	data []*SearchQueueItem
+}
+
+func NewSearchQueue(ctx *AStarSearchContext) SearchQueue {
+	return SearchQueue{
+		ctx,
+		make([]*SearchQueueItem, 0, ctx.NodeCountMax),
+	}
+}
+
+func (pq SearchQueue) Len() int {
+	return len(pq.data)
+}
+
+func (pq SearchQueue) Less(i, j int) bool {
+	x1, x2 := pq.data[i], pq.data[j]
+	p1, p2 := x1.priority(), x2.priority()
+	return p1 < p2 || p1 == p2 && pq.ctx.TieBreak(x1.value, x2.value)
+}
+
+func (pq SearchQueue) Swap(i, j int) {
+	pq.data[i], pq.data[j] = pq.data[j], pq.data[i]
+	pq.data[i].index = i
+	pq.data[j].index = j
+}
+
+func (pq *SearchQueue) Push(x interface{}) {
+	n := len(pq.data)
+	item := x.(*SearchQueueItem)
+	item.index = n
+	pq.data = append(pq.data, item)
+}
+
+func (pq *SearchQueue) Pop() interface{} {
+	old := pq.data
+	n := len(old)
+	item := old[n-1]
+	item.index = -1
+	pq.data = old[0:n-1]
+	return item
+}
 
 type AStarSearchContext struct {
 	// Initial state
@@ -28,7 +79,7 @@ type AStarSearchContext struct {
 
 /*
 https://en.wikipedia.org/wiki/A*_search_algorithm
- */
+*/
 func AStarSearch(ctx *AStarSearchContext) ([]SearchNode, error) {
 	if len(ctx.Destinations) == 0 {
 		return nil, fmt.Errorf("no destinations")
@@ -63,23 +114,53 @@ func AStarSearch(ctx *AStarSearchContext) ([]SearchNode, error) {
 		return min
 	}
 
-	// Position processing queue
-	openSet := make([]SearchNode, 0, ctx.NodeCountMax)
-	// Positions already processed
+	// Priority queue of the "open set"
+	openSetQueue := NewSearchQueue(ctx)
+	heap.Init(&openSetQueue)
+	// Find "open set" queue item by search node value
+	openSetMap := make(map[SearchNode]*SearchQueueItem)
+	// Nodes already processed
 	closedSet := make(map[SearchNode]bool)
-	// Positions queued or processed
+	// Nodes queued or processed
 	visited := make(map[SearchNode]bool)
+
+	pushFunc := func(n SearchNode) {
+		item := &SearchQueueItem{
+			value: n,
+			priority: func() int {
+				return f(n)
+			},
+		}
+		heap.Push(&openSetQueue, item)
+		openSetMap[n] = item
+		visited[n] = true
+	}
+
+	popFunc := func() SearchNode {
+		item := heap.Pop(&openSetQueue).(*SearchQueueItem)
+		delete(openSetMap, item.value)
+		closedSet[item.value] = true	// Don't visit this node again
+		return item.value
+	}
+
+	updateFunc := func(n SearchNode) {
+		if item, ok := openSetMap[n]; ok {
+			heap.Fix(&openSetQueue, item.index)
+		} else {
+			panic("AStarSearch: could not find openSetMap item")
+		}
+	}
 
 	start := ctx.Start
 	gScore[start] = 0
 	fScore[start] = h(start)
-	openSet = append(openSet, start)
-	visited[start] = true
+	// First node to process is starting node
+	pushFunc(start)
 
-	// Keep track of most efficient path to each position
+	// Keep track of most efficient path to each node
 	cameFrom := make(map[SearchNode]SearchNode)
 	path := func(destination SearchNode) []SearchNode {
-		result := make([]SearchNode, 0, g(destination))		// Path cost is a good guess of path size to preallocate
+		result := make([]SearchNode, 0)
 		next := destination
 		for next != start {
 			result = append(result, next)
@@ -92,26 +173,17 @@ func AStarSearch(ctx *AStarSearchContext) ([]SearchNode, error) {
 		return result
 	}
 
-	for len(openSet) > 0 {
-		// Sort by f(n), tie-break on reading order
-		sort.Slice(openSet, func(i, j int) bool {
-			p1, p2 := openSet[i], openSet[j]
-			f1, f2 := f(p1), f(p2)
-			return f1 < f2 || (f1 == f2 && ctx.TieBreak(p1, p2))
-		})
-		// Get most promising next position
-		var current SearchNode
-		current, openSet = openSet[0], openSet[1:]
+	for openSetQueue.Len() > 0 {
+		// Get most promising next node
+		current := popFunc()
 		// Did we find a goal?
 		for _, d := range ctx.Destinations {
 			if current == d {
 				return path(current), nil
 			}
 		}
-		// Don't visit this position again
-		closedSet[current] = true
 
-		// Score potential next positions
+		// Score potential next nodes
 		for _, neighbour := range ctx.Adjacent(current) {
 			// Calculate new path cost
 			nScore := gScore[current] + ctx.Cost(current, neighbour)
@@ -122,22 +194,21 @@ func AStarSearch(ctx *AStarSearchContext) ([]SearchNode, error) {
 			}
 			if !visited[neighbour] {
 				// Position we've never seen before, add to the queue
-				openSet = append(openSet, neighbour)
-				visited[neighbour] = true
+				pushFunc(neighbour)
 			} else if nScore > g(neighbour) {
 				// Already a better path to neighbour
 				continue
 			} else if nScore == g(neighbour) && !ctx.TieBreak(current, cameFrom[neighbour]) {
-				// Already an equal path to neighbour which came from higher in
-				// the "reading order". The tendency to follow the reading order
-				// also means a square will be visited from a higher reading
-				// order square if possible.
+				// Already an equal path to neighbour which came from a "better" source
+				// (according to the tie break function)
 				continue
 			}
-			// This position is already in the queue, and we've found a better path to it
+			// This node is already in the queue, and we've found a better path to it
 			cameFrom[neighbour] = current
 			gScore[neighbour] = nScore
 			fScore[neighbour] = nScore + h(neighbour)
+			// Force the priority queue to update
+			updateFunc(neighbour)
 		}
 	}
 

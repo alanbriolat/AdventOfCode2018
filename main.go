@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"runtime/pprof"
 
 	_ "github.com/alanbriolat/AdventOfCode2018/day01"
 	_ "github.com/alanbriolat/AdventOfCode2018/day02"
@@ -32,6 +33,7 @@ import (
 )
 
 var verbose = flag.Bool("v", false, "verbose logging")
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 
 func main() {
 	mainLog := log.New(os.Stdout, "main: ", 0)
@@ -43,6 +45,14 @@ func main() {
 	only := make(map[string]struct{})
 	for _, name := range flag.Args() {
 		only[name] = struct{}{}
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		util.Check(err)
+		err = pprof.StartCPUProfile(f)
+		util.Check(err)
+		defer pprof.StopCPUProfile()
 	}
 
 	for _, s := range util.GetSolutions() {

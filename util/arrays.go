@@ -17,7 +17,7 @@ func NewGenericGrid(w, h int) GenericGrid {
 }
 
 func (g *GenericGrid) Valid(p Vec2D) bool {
-	return p.Y >= 0 && p.Y < len(*g) && p.X >= 0 && p.X < len((*g)[0])
+	return p.X >= 0 && p.X < g.Width() && p.Y >= 0 && p.Y < g.Height()
 }
 
 func (g *GenericGrid) At(p Vec2D) *Generic {

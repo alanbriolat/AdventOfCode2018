@@ -43,8 +43,8 @@ func (s1 State) LessThan(s2 State) bool {
 	}
 }
 
-func MakeErosionMap(depth int, target util.Vec2D) util.IntGrid {
-	erosion := util.NewIntGrid(target.X+1, target.Y+1)
+func MakeErosionMap(depth int, target util.Vec2D, scale util.Vec2D) util.IntGrid {
+	erosion := util.NewIntGrid(target.X*scale.X+1, target.Y*scale.Y+1)
 
 	geologicIndex := func(p util.Vec2D) int {
 		switch {
@@ -86,7 +86,7 @@ func MakeTerrainMap(erosion util.IntGrid) util.ByteGrid {
 Sum the terrain/risk value of every square, in a map from (0, 0) to target (inclusive).
  */
 func part1impl(logger *log.Logger, depth int, target util.Vec2D) int {
-	erosion := MakeErosionMap(depth, target)
+	erosion := MakeErosionMap(depth, target, util.Vec2D{1, 1})
 	terrain := MakeTerrainMap(erosion)
 
 	sum := 0
@@ -101,12 +101,37 @@ func part1impl(logger *log.Logger, depth int, target util.Vec2D) int {
 /*
 Find the shortest path from (0, 0) to target, taking equipment into account.
 
-TODO: expand the grid, might go beyond target...
 TODO: combine equipment change and navigation? equipment needs to be valid in both new and old location!
  */
 func part2impl(logger *log.Logger, depth int, target util.Vec2D) int {
-	erosion := MakeErosionMap(depth, target)
-	terrain := MakeTerrainMap(erosion)
+	scale := util.Vec2D{1, 1}
+	var erosion util.IntGrid
+	var terrain util.ByteGrid
+	regenerate := func() {
+		logger.Printf("generating map: %d x %d", target.X*scale.X+1, target.Y*scale.Y+1)
+		erosion = MakeErosionMap(depth, target, scale)
+		terrain = MakeTerrainMap(erosion)
+	}
+	regenerate()
+
+	valid := func(p util.Vec2D) bool {
+		// This is definitely valid
+		if terrain.Valid(p) {
+			return true
+		}
+		// This will never be valid
+		if p.X < 0 || p.Y < 0 {
+			return false
+		}
+		// If p isn't valid because it's beyond the right and/or bottom,
+		// expand the grid until it will be enclosed
+		logger.Printf("expanding to include %v", p)
+		for ; p.X >= target.X*scale.X+1; scale.X++ {}
+		for ; p.Y >= target.Y*scale.Y+1; scale.Y++ {}
+		regenerate()
+		// Should be valid now
+		return terrain.Valid(p)
+	}
 
 	search := AStarSearchContext{
 		Start: State{
@@ -133,7 +158,7 @@ func part2impl(logger *log.Logger, depth int, target util.Vec2D) int {
 			for _, offset := range offsets {
 				next := n
 				next.Position.AddInPlace(offset)
-				if terrain.Valid(next.Position) && Compatible(*terrain.At(next.Position), next.Equipment) {
+				if valid(next.Position) && Compatible(*terrain.At(next.Position), next.Equipment) {
 					result = append(result, next)
 				}
 			}
@@ -162,7 +187,6 @@ func part2impl(logger *log.Logger, depth int, target util.Vec2D) int {
 
 	path, err := AStarSearch(&search)
 	util.Check(err)
-	logger.Println(path)
 
 	prev := search.Start
 	cost := 0

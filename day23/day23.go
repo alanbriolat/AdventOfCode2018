@@ -81,10 +81,25 @@ func part1impl(logger *log.Logger, filename string) int {
 	return count
 }
 
+/*
+Applies an "evolutionary strategy" to discover the optimum location, along the following lines:
+
+- The fitness comparison optimises for number of nanobots in range, then for distance from (0, 0, 0)
+- The initial population is the location of every nanobot
+- Each generation:
+	- Preserve `keep` best locations from previous generation
+	- Generate `multiply` new locations for each preserved location
+	- New locations are perturbed by a random Manhattan distance, which is randomly partitioned into (X, Y, Z)
+	- If the best location from this generation is fitter than from last generation, record it
+- The perturbation is limited by `energy`, decreasing exponentially from the size of the entire search volume
+- When the best location hasn't been surpassed in `threshold` generations, terminate the algorithm
+
+(This isn't a genetic algorithm, because it has mutation and selection but no crossover.)
+ */
 func part2impl(logger *log.Logger, filename string) int {
 	nanobots := readNanobots(filename)
 	min, max := util.MaxVec3D(), util.MinVec3D()
-	candidates := make([]Location, 0, len(nanobots))
+	population := make([]Location, 0, len(nanobots))
 
 	// Find extend of coordinate space
 	for _, bot := range nanobots {
@@ -114,39 +129,36 @@ func part2impl(logger *log.Logger, filename string) int {
 		}
 	}
 
-	//validFunc := func(p util.Vec3D) bool {
-	//	return p.X >= min.X && p.X <= max.X && p.Y >= min.Y && p.Y <= max.Y && p.Z >= min.Z && p.Z <= max.Z
-	//}
-
 	// Populate candidate locations from nanobot locations
 	for _, b := range nanobots {
-		candidates = append(candidates, Location{
+		population = append(population, Location{
 			Position: b.Position,
 			InRangeOf: evaluateFunc(b.Position),
 		})
 	}
 	// Sort by number of bots in range
-	sort.Slice(candidates, locationSort(candidates))
-	logger.Printf("most connected positions: %v...", candidates[:util.MinInt(10, len(candidates)-1)])
+	sort.Slice(population, locationSort(population))
+	//logger.Printf("most connected positions: %v...", population[:util.MinInt(10, len(population)-1)])
 
-	amount := max.Sub(min).Manhattan()
-	threshold := 100
+	energy := max.Sub(min).Manhattan()
+	threshold := 10
 	keep := len(nanobots)
-	multiply := 10
+	multiply := 5
 	generate := keep * multiply
 
-	var best Location
+	best := Location{}
 	bestSurvival := 0	// How long the best location has remained the best location
 
-	for bestSurvival < threshold {
-		logger.Printf("new generation with amount=%d threshold=%d keep=%d generate=%d", amount, threshold, keep, generate)
-		newCandidates := make([]Location, 0, keep + generate)
-		for _, loc := range candidates[0:keep] {
+	generation := 0
+	for ; bestSurvival < threshold; generation++ {
+		//logger.Printf("new generation with energy=%d threshold=%d keep=%d generate=%d", energy, threshold, keep, generate)
+		newPopulation := make([]Location, 0, keep + generate)
+		for _, loc := range population[0:keep] {
 			// Keep the existing location
-			newCandidates = append(newCandidates, loc)
+			newPopulation = append(newPopulation, loc)
 			for i := 0; i < multiply; i++ {
 				// Pick a random manhattan distance to perturb by (at least 1)
-				distance := rand.Intn(amount)+1
+				distance := rand.Intn(energy)+1
 				// Partition the distance into random X, Y and Z amounts
 				firstPartition := rand.Intn(distance+1)
 				secondPartition := rand.Intn(distance+1)
@@ -169,33 +181,36 @@ func part2impl(logger *log.Logger, filename string) int {
 				newPos.MinInPlace(max)
 				// Create and add the new location
 				//logger.Printf("adding new candidate: original=%v, perturb=%v, new=%v", loc.Position, perturb, newPos)
-				newCandidates = append(newCandidates, Location{
+				newPopulation = append(newPopulation, Location{
 					Position: newPos,
 					InRangeOf: evaluateFunc(newPos),
 				})
 			}
 		}
 
-		// Sort the new candidates
-		sort.Slice(newCandidates, locationSort(newCandidates))
-		// See what the best candidate is so far
-		newBest := newCandidates[0]
-		if newBest == best {
-			bestSurvival++
-		} else {
+		// Sort the new population
+		sort.Slice(newPopulation, locationSort(newPopulation))
+		// See what the best location is so far
+		newBest := newPopulation[0]
+
+		// Did we get better?
+		if lessFunc(&newBest, &best) {
 			best = newBest
 			bestSurvival = 0
+		} else {
+			bestSurvival++
 		}
-		logger.Printf("best location so far: %+v, distance %d, survived %d generations",
-			best, best.Position.Manhattan(), bestSurvival)
-		candidates = newCandidates
+		//logger.Printf("best location so far: %+v, distance %d, survived %d generations",
+		//	best, best.Position.Manhattan(), bestSurvival)
+		population = newPopulation
 
-		if amount > 1 {
-			amount /= 2
+		// Exponentially reduce the randomness
+		if energy > 1 {
+			energy /= 2
 		}
 	}
 
-	logger.Printf("final best location: %+v, distance %d", best, best.Position.Manhattan())
+	logger.Printf("best location after %d generations: %+v, distance=%d", generation, best, best.Position.Manhattan())
 	return best.Position.Manhattan()
 }
 

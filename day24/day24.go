@@ -184,7 +184,7 @@ func (b *Battle) Fight() (immuneCount, infectionCount int) {
 				Group: t,
 				PotentialDamage: t.EffectiveDamage(p, g.Attack),
 			}
-			if newTarget.BetterThan(target) {
+			if newTarget.PotentialDamage > 0 && newTarget.BetterThan(target) {
 				target = newTarget
 			}
 		}
@@ -315,25 +315,39 @@ func part2impl(logger *log.Logger, filename string) int {
 			start = end
 		}
 	}
-	logger.Printf("minimum boost is between %d and %d\n", start, end)
+	//logger.Printf("minimum boost is between %d and %d\n", start, end)
 
 	// Optimise `start` to the last value that loses and `end` to the first value that wins
 	for {
 		boost := (start + end) / 2
 		immuneCount, win := evaluationFunc(boost)
-		logger.Printf("evaluated %d, immune = %d, win = %v", boost, immuneCount, win)
+		//logger.Printf("evaluated %d, immune = %d, win = %v", boost, immuneCount, win)
 		if win {
 			end = boost
 			result = immuneCount
 		} else {
 			start = boost
 		}
-		logger.Printf("minimum boost is between %d and %d\n", start, end)
+		//logger.Printf("minimum boost is between %d and %d\n", start, end)
 		// Once the values are adjacent, `end` should be the lowest boost that wins
 		if end - start == 1 {
-			return result
+			logger.Printf("binary search found boost = %d, immune = %d\n", end, result)
+			break
 		}
 	}
+
+	// We may have made a bad assumption that this is solvable by binary search, so let's scan
+	// from 1 to `end` and find the first win
+	for boost := 1; boost <= end; boost++ {
+		if immuneCount, win := evaluationFunc(boost); win {
+			logger.Printf("linear search found boost = %d, immune = %d\n", boost, immuneCount)
+			end = boost
+			result = immuneCount
+			break
+		}
+	}
+
+	return result
 }
 
 func init() {

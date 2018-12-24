@@ -88,7 +88,7 @@ Applies an "evolutionary strategy" to discover the optimum location, along the f
 - The initial population is the location of every nanobot
 - Each generation:
 	- Preserve `keep` best locations from previous generation
-	- Generate `multiply` new locations for each preserved location
+	- Generate `multiply` new (unique) locations for each preserved location
 	- New locations are perturbed by a random Manhattan distance, which is randomly partitioned into (X, Y, Z)
 	- If the best location from this generation is fitter than from last generation, record it
 - The perturbation is limited by `energy`, decreasing exponentially from the size of the entire search volume
@@ -153,10 +153,12 @@ func part2impl(logger *log.Logger, filename string) int {
 	for ; bestSurvival < threshold; generation++ {
 		//logger.Printf("new generation with energy=%d threshold=%d keep=%d generate=%d", energy, threshold, keep, generate)
 		newPopulation := make([]Location, 0, keep + generate)
+		newPopulationSet := make(map[Location]bool)
 		for _, loc := range population[0:keep] {
 			// Keep the existing location
 			newPopulation = append(newPopulation, loc)
-			for i := 0; i < multiply; i++ {
+			newPopulationSet[loc] = true
+			for i, generated := 0, 0; generated < multiply && i < multiply*multiply; i++ {
 				// Pick a random manhattan distance to perturb by (at least 1)
 				distance := rand.Intn(energy)+1
 				// Partition the distance into random X, Y and Z amounts
@@ -181,10 +183,15 @@ func part2impl(logger *log.Logger, filename string) int {
 				newPos.MinInPlace(max)
 				// Create and add the new location
 				//logger.Printf("adding new candidate: original=%v, perturb=%v, new=%v", loc.Position, perturb, newPos)
-				newPopulation = append(newPopulation, Location{
+				newLoc := Location{
 					Position: newPos,
 					InRangeOf: evaluateFunc(newPos),
-				})
+				}
+				if !newPopulationSet[newLoc] {
+					newPopulation = append(newPopulation, newLoc)
+					newPopulationSet[newLoc] = true
+					generated++
+				}
 			}
 		}
 
@@ -211,6 +218,17 @@ func part2impl(logger *log.Logger, filename string) int {
 	}
 
 	logger.Printf("best location after %d generations: %+v, distance=%d", generation, best, best.Position.Manhattan())
+
+	bestCount := 1
+	for i := 1; i < len(population); i++ {
+		b := &population[i]
+		if lessFunc(&best, b) {
+			break
+		}
+		bestCount++
+	}
+	logger.Printf("found %d best locations, %+v", bestCount, population[bestCount-1])
+
 	return best.Position.Manhattan()
 }
 

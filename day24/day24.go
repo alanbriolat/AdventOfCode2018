@@ -67,6 +67,12 @@ func (g *ParsedGroup) ToGroup(isInfection bool) *Group {
 	return group
 }
 
+func (g *Group) Copy() *Group {
+	// The copy has a reference to the same Multiplier map, but that shouldn't ever be changed
+	result := *g
+	return &result
+}
+
 func (g *Group) EffectiveDamage(damage int, damageType string) int {
 	if m, ok := g.Multiplier[damageType]; ok {
 		return damage * m
@@ -107,6 +113,24 @@ func (b *ParsedBattle) ToBattle() *Battle {
 	return battle
 }
 
+func (b *Battle) Copy() *Battle {
+	result := &Battle{
+		Groups: make([]*Group, len(b.Groups)),
+	}
+	for i, g := range b.Groups {
+		result.Groups[i] = g.Copy()
+	}
+	return result
+}
+
+func (b *Battle) BoostImmuneSystem(amount int) {
+	for _, g := range b.Groups {
+		if !g.IsInfection {
+			g.Power += amount
+		}
+	}
+}
+
 func (b *Battle) FilterDeadGroups() {
 	filter := func(slice *[]*Group) {
 		next := 0
@@ -132,7 +156,7 @@ func (b *Battle) CountUnits(isInfection bool) int {
 	return result
 }
 
-func (b *Battle) Fight() (immuneSystem, infection int) {
+func (b *Battle) Fight() (immuneCount, infectionCount int) {
 	// Target selection phase:
 	// Groups choose targets in decreasing effective power order, tie-broken by decreasing initiative order
 	selectionOrder := make([]*Group, len(b.Groups))
@@ -192,6 +216,22 @@ func (b *Battle) Fight() (immuneSystem, infection int) {
 	return b.CountUnits(false), b.CountUnits(true)
 }
 
+func (b *Battle) Run() (immuneCount, infectionCount int) {
+	immuneCount, infectionCount = b.CountUnits(false), b.CountUnits(true)
+	//fmt.Printf("start: immune = %d, infection = %d\n", immuneCount, infectionCount)
+	for i := 0; immuneCount > 0 && infectionCount > 0; i++ {
+		newImmuneCount, newInfectionCount := b.Fight()
+		if newImmuneCount == immuneCount && newInfectionCount == infectionCount {
+			// Reached a stalemate!
+			return
+		} else {
+			immuneCount, infectionCount = newImmuneCount, newInfectionCount
+		}
+		//fmt.Printf("fight %d: immune = %d, infection = %d\n", i+1, immuneCount, infectionCount)
+	}
+	return
+}
+
 type Target struct {
 	Group *Group
 	PotentialDamage int
@@ -222,7 +262,7 @@ func (t *Target) BetterThan(o *Target) bool {
 	}
 }
 
-func part1impl(logger *log.Logger, filename string) int {
+func parseBattle(filename string) *Battle {
 	var err error
 
 	reader, err := os.Open(filename)
@@ -233,25 +273,67 @@ func part1impl(logger *log.Logger, filename string) int {
 	err = parser.Parse(reader, parsedBattle)
 	util.Check(err)
 
-	//fmt.Printf("Immune System:\n")
-	//for _, unit := range parsedBattle.ImmuneSystem {
-	//	fmt.Printf("%+v\n", unit)
-	//}
-	//fmt.Printf("Infection:\n")
-	//for _, unit := range parsedBattle.Infection {
-	//	fmt.Printf("%+v\n", unit)
-	//}
+	return parsedBattle.ToBattle()
+}
 
-	battle := parsedBattle.ToBattle()
-	immuneCount, infectionCount := battle.CountUnits(false), battle.CountUnits(true)
-	//logger.Printf("immune=%d, infection=%d\n", immuneCount, infectionCount)
-	// Run until one army loses
-	for immuneCount > 0 && infectionCount > 0 {
-		immuneCount, infectionCount = battle.Fight()
-		//logger.Printf("immune=%d, infection=%d\n", immuneCount, infectionCount)
-	}
+func part1impl(logger *log.Logger, filename string) int {
+	battle := parseBattle(filename)
+	immuneCount, infectionCount := battle.Run()
 	// One of these should be 0
 	return immuneCount + infectionCount
+}
+
+/*
+Do a binary search on immune system boost amounts to find the smallest amount where the immune system wins.
+ */
+func part2impl(logger *log.Logger, filename string) int {
+	prototype := parseBattle(filename)
+
+	// Evaluate if `boost` is sufficient to win
+	evaluationFunc := func(boost int) (int, bool) {
+		battle := prototype.Copy()
+		battle.BoostImmuneSystem(boost)
+		immuneCount, infectionCount := battle.Run()
+		return immuneCount, infectionCount == 0
+	}
+
+	start := 0
+	end := 0
+	result := 0
+	initialStep := 1024
+
+	// Find an interval which contains the optimum
+	if _, win := evaluationFunc(start); win {
+		panic("winning without a boost")
+	}
+	for {
+		end += initialStep
+		_, win := evaluationFunc(end)
+		if win {
+			break
+		} else {
+			start = end
+		}
+	}
+	logger.Printf("minimum boost is between %d and %d\n", start, end)
+
+	// Optimise `start` to the last value that loses and `end` to the first value that wins
+	for {
+		boost := (start + end) / 2
+		immuneCount, win := evaluationFunc(boost)
+		logger.Printf("evaluated %d, immune = %d, win = %v", boost, immuneCount, win)
+		if win {
+			end = boost
+			result = immuneCount
+		} else {
+			start = boost
+		}
+		logger.Printf("minimum boost is between %d and %d\n", start, end)
+		// Once the values are adjacent, `end` should be the lowest boost that wins
+		if end - start == 1 {
+			return result
+		}
+	}
 }
 
 func init() {
@@ -260,5 +342,11 @@ func init() {
 	})
 	util.RegisterSolution("day24part1", func(logger *log.Logger) string {
 		return fmt.Sprint(part1impl(logger, "day24/input.txt"))
+	})
+	util.RegisterSolution("day24test2", func(logger *log.Logger) string {
+		return fmt.Sprint(part2impl(logger, "day24/input_test.txt"))
+	})
+	util.RegisterSolution("day24part2", func(logger *log.Logger) string {
+		return fmt.Sprint(part2impl(logger, "day24/input.txt"))
 	})
 }

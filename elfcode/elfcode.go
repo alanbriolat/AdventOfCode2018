@@ -34,8 +34,8 @@ type Instruction struct {
 	A, B, C int
 }
 
-func (i *Instruction) Execute(in, out Registers) {
-	Operations[i.Op](in, out, i.A, i.B, i.C)
+func (i *Instruction) Execute(proc *Processor, in, out Registers) {
+	proc.Operations[i.Op](in, out, i.A, i.B, i.C)
 }
 
 type Program struct {
@@ -68,15 +68,43 @@ func ParseProgram(reader io.Reader, registerCount int) Program {
 }
 
 func (p *Program) Run(initialState Registers) (Registers, int) {
-	instructionCount := 0
-	state := make(Registers, p.RegisterCount)
-	for i := 0; i < len(state) && i < len(initialState); i++ {
-		state[i] = initialState[i]
+	proc := Processor{Program: p}
+	proc.Init(initialState)
+	for {
+		if halted := proc.Step(); halted {
+			break
+		}
 	}
-	ip := &state[p.IP]
-	for ; *ip < len(p.Code); *ip++ {
-		instructionCount++
-		p.Code[*ip].Execute(state, state)
+	return proc.State, proc.InstructionCount
+}
+
+type Processor struct {
+	Program *Program
+	InstructionCount int
+	State Registers
+	IP *int
+	Operations map[string]Operation
+}
+
+func (p *Processor) Init(initialState Registers) {
+	p.InstructionCount = 0
+	p.State = make(Registers, p.Program.RegisterCount)
+	for i := 0; i < len(p.State) && i < len(initialState); i++ {
+		p.State[i] = initialState[i]
 	}
-	return state, instructionCount
+	p.IP = &p.State[p.Program.IP]
+	p.Operations = make(map[string]Operation)
+	for k, v := range Operations {
+		p.Operations[k] = v
+	}
+}
+
+func (p *Processor) Step() (halted bool) {
+	if *p.IP >= len(p.Program.Code) {
+		return true
+	}
+	p.InstructionCount++
+	p.Program.Code[*p.IP].Execute(p, p.State, p.State)
+	*p.IP++
+	return false
 }

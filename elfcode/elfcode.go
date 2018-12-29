@@ -99,8 +99,12 @@ func (p *Processor) Init(initialState Registers) {
 	}
 }
 
+func (p *Processor) Halted() bool {
+	return *p.IP >= len(p.Program.Code)
+}
+
 func (p *Processor) Step() (halted bool) {
-	if *p.IP >= len(p.Program.Code) {
+	if p.Halted() {
 		return true
 	}
 	p.InstructionCount++

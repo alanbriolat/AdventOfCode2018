@@ -341,7 +341,7 @@ func TestSimplifyPath(t *testing.T) {
 	}
 }
 
-func TestFurthestRoom(t *testing.T) {
+func TestRoomStats(t *testing.T) {
 	tables := []struct{
 		input string
 		result int
@@ -352,7 +352,7 @@ func TestFurthestRoom(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		result := FurthestRoom(table.input)
+		result, _ := RoomStats(table.input, 0)
 		if result != table.result {
 			t.Errorf("expected %d, got %d", table.result, result)
 		}

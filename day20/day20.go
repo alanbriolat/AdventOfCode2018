@@ -1,21 +1,14 @@
-/*
-Part 1
-======
-
-Naive approach:
-- Expand the regex to every prefix of every string it can match
-- For each of those strings, reduce it by removing "redundant" operations
-- Update the end point with the path length, if it's shorter than a previous path to that location
-- Find the room with the highest path length
- */
 package day20
 
 import (
 	"fmt"
 	"github.com/alanbriolat/AdventOfCode2018/util"
 	"log"
-	"math"
 	"strings"
+)
+
+const (
+	Indent = "  "
 )
 
 type Visitor func(s string)
@@ -26,8 +19,18 @@ type Expr interface {
 	Visit every prefix with f, return final strings.
 
 	e.g. ABCD -> f(A), f(AB), f(ABC), f(ABCD), return {ABCD,}
-	  */
+	 */
 	Enumerate(prefix string, f Visitor) []string
+	/*
+	Count how many final strings will be generated
+	 */
+	StringCount() int
+	/*
+	Count how many syntax tree nodes there are
+	 */
+	SyntaxNodeCount() int
+
+	BuildTreeString(builder *strings.Builder, depth int)
 }
 
 type Literal string
@@ -35,6 +38,9 @@ type Choice []Expr
 type Sequence []Expr
 
 func (e Literal) Enumerate(prefix string, f Visitor) []string {
+	if f == nil {
+		return []string{prefix + string(e)}
+	}
 	sb := strings.Builder{}
 	sb.WriteString(prefix)
 	for i := range e {
@@ -46,6 +52,21 @@ func (e Literal) Enumerate(prefix string, f Visitor) []string {
 
 func (e Literal) String() string {
 	return string(e)
+}
+
+func (e Literal) StringCount() int {
+	return 1
+}
+
+func (e Literal) SyntaxNodeCount() int {
+	return 1
+}
+
+func (e Literal) BuildTreeString(builder *strings.Builder, depth int) {
+	builder.WriteString(strings.Repeat(Indent, depth))
+	builder.WriteString("Literal(\"")
+	builder.WriteString(string(e))
+	builder.WriteString("\")")
 }
 
 func (e Choice) Enumerate(prefix string, f Visitor) []string {
@@ -69,6 +90,33 @@ func (e Choice) String() string {
 	return sb.String()
 }
 
+func (e Choice) StringCount() int {
+	sum := 0
+	for _, next := range e {
+		sum += next.StringCount()
+	}
+	return sum
+}
+
+func (e Choice) SyntaxNodeCount() int {
+	sum := 1
+	for _, next := range e {
+		sum += next.SyntaxNodeCount()
+	}
+	return sum
+}
+
+func (e Choice) BuildTreeString(builder *strings.Builder, depth int) {
+	builder.WriteString(strings.Repeat(Indent, depth))
+	builder.WriteString(fmt.Sprintf("Choice{  // depth=%d\n", depth))
+	for _, next := range e {
+		next.BuildTreeString(builder, depth+1)
+		builder.WriteString(",\n")
+	}
+	builder.WriteString(strings.Repeat(Indent, depth))
+	builder.WriteString("}")
+}
+
 func (e Sequence) Enumerate(prefix string, f Visitor) []string {
 	prefixes := []string{prefix}
 	for _, next := range e {
@@ -87,6 +135,33 @@ func (e Sequence) String() string {
 		sb.WriteString(next.String())
 	}
 	return sb.String()
+}
+
+func (e Sequence) StringCount() int {
+	prod := 1
+	for _, next := range e {
+		prod *= next.StringCount()
+	}
+	return prod
+}
+
+func (e Sequence) SyntaxNodeCount() int {
+	sum := 1
+	for _, next := range e {
+		sum += next.SyntaxNodeCount()
+	}
+	return sum
+}
+
+func (e Sequence) BuildTreeString(builder *strings.Builder, depth int) {
+	builder.WriteString(strings.Repeat(Indent, depth))
+	builder.WriteString(fmt.Sprintf("Sequence{  // depth=%d\n", depth))
+	for _, next := range e {
+		next.BuildTreeString(builder, depth+1)
+		builder.WriteString(",\n")
+	}
+	builder.WriteString(strings.Repeat(Indent, depth))
+	builder.WriteString("}")
 }
 
 func ReadLiteral(reader *strings.Reader) Literal {
@@ -200,60 +275,73 @@ func SimplifyPath(directions string) string {
 	return string(stack.Data)
 }
 
-func ResolvePath(directions string) util.Vec2D {
-	result := util.Vec2D{0, 0}
-	for i := range directions {
-		switch directions[i] {
-		case 'N':
-			result.Y--
-		case 'E':
-			result.X++
-		case 'S':
-			result.Y++
-		case 'W':
-			result.X--
-		}
+func directionToVec2D(d byte) util.Vec2D {
+	switch d {
+	case 'N':
+		return util.Vec2D{0, -1}
+	case 'E':
+		return util.Vec2D{1, 0}
+	case 'S':
+		return util.Vec2D{0, 1}
+	case 'W':
+		return util.Vec2D{-1, 0}
+	default:
+		panic("invalid direction")
 	}
-	return result
 }
 
-func FurthestRoom(regex string) int {
-	// Shortest path to each room
-	rooms := make(map[util.Vec2D]string)
-
-	visitPartial := func (path string) {
-		// Remove redundancy from path, to find shortest version of the path
-		simplified := SimplifyPath(path)
-		// Find the room the path ends at
-		room := ResolvePath(simplified)
-		// Record first/shorter path to the room
-		if oldPath, ok := rooms[room]; !ok || len(simplified) < len(oldPath) {
-			rooms[room] = simplified
+func traverse(distances map[util.Vec2D]int, position util.Vec2D, distance int, expr Expr) (util.Vec2D, int) {
+	switch expr := expr.(type) {
+	case Literal:
+		for i := range expr {
+			position.AddInPlace(directionToVec2D(expr[i]))
+			distance++
+			if prevDistance, ok := distances[position]; ok {
+				distance = util.MinInt(distance, prevDistance)
+			}
+			distances[position] = distance
 		}
+		return position, distance
+	case Sequence:
+		for _, e := range expr {
+			position, distance = traverse(distances, position, distance, e)
+		}
+		return position, distance
+	case Choice:
+		for _, e := range expr {
+			// We assume choices are either detours (return to starting point) or terminal, rather than true branches,
+			// so no need to figure out what the resulting position and distance of a choice is.
+			traverse(distances, position, distance, e)
+		}
+		return position, distance
+	default:
+		panic("can't traverse() unknown type")
 	}
-	visitFinal := func (path string) {
-	}
+}
 
-	// Run every path
+func RoomStats(regex string, threshold int) (int, int) {
 	expr := ReadExpression(strings.NewReader(regex))
-	EnumerateExpression(expr, visitPartial, visitFinal)
 
-	// Find the room where the longest shortest path
-	furthestDistance := math.MinInt32
-	//var furthestRoom util.Vec2D
-	for _, path := range rooms {
-		if len(path) > furthestDistance {
-			furthestDistance = len(path)
-			//furthestRoom = room
+	distances := make(map[util.Vec2D]int)
+	traverse(distances, util.Vec2D{0, 0}, 0, expr)
+
+	maxDistance := -1
+	thresholdCount := 0
+	for _, distance := range distances {
+		maxDistance = util.MaxInt(maxDistance, distance)
+		if distance >= threshold {
+			thresholdCount++
 		}
 	}
-	return furthestDistance
+
+	return maxDistance, thresholdCount
 }
 
 func init() {
-	util.RegisterSolution("day20part1", func(logger *log.Logger) string {
+	util.RegisterSolution("day20", func(logger *log.Logger) string {
 		lines, err := util.ReadLinesFromFile("day20/input.txt")
 		util.Check(err)
-		return fmt.Sprint(FurthestRoom(lines[0]))
+		maxDistance, thresholdCount := RoomStats(lines[0], 1000)
+		return fmt.Sprintf("part1 = %d, part2 = %d", maxDistance, thresholdCount)
 	})
 }

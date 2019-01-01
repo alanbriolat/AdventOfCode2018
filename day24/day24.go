@@ -351,15 +351,15 @@ func part2impl(logger *log.Logger, filename string) int {
 }
 
 func init() {
-	util.RegisterSolution("day24test1", func(logger *log.Logger) string {
-		return fmt.Sprint(part1impl(logger, "day24/input_test.txt"))
-	})
+	//util.RegisterSolution("day24test1", func(logger *log.Logger) string {
+	//	return fmt.Sprint(part1impl(logger, "day24/input_test.txt"))
+	//})
 	util.RegisterSolution("day24part1", func(logger *log.Logger) string {
 		return fmt.Sprint(part1impl(logger, "day24/input.txt"))
 	})
-	util.RegisterSolution("day24test2", func(logger *log.Logger) string {
-		return fmt.Sprint(part2impl(logger, "day24/input_test.txt"))
-	})
+	//util.RegisterSolution("day24test2", func(logger *log.Logger) string {
+	//	return fmt.Sprint(part2impl(logger, "day24/input_test.txt"))
+	//})
 	util.RegisterSolution("day24part2", func(logger *log.Logger) string {
 		return fmt.Sprint(part2impl(logger, "day24/input.txt"))
 	})
